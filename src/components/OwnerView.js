@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useApp } from '../context/AppContext';
 
 export default function OwnerView() {
@@ -14,222 +16,173 @@ export default function OwnerView() {
     platformStats,
     activeOrder,
     mechanics,
-    toggleMechanicVerification,
   } = useApp();
 
-  const [activeTab, setActiveTab] = useState('analytics'); // 'analytics' | 'mechanics' | 'orders'
+  const [activeTab, setActiveTab] = useState('analytics');
 
   const formatRupiah = (val) => 'Rp ' + Number(val || 0).toLocaleString('id-ID');
 
   return (
     <View style={styles.container}>
-      {/* Owner Header */}
-      <View style={styles.header}>
-        <View style={styles.headerRow}>
-          <View style={styles.logoBox}>
-            <Text style={{ fontSize: 20 }}>👑</Text>
-          </View>
-          <View style={{ flex: 1, marginLeft: 10 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Text style={styles.headerTitle}>OWNER DASHBOARD</Text>
-              <View style={styles.adminTag}>
-                <Text style={styles.adminTagText}>SUPER ADMIN</Text>
-              </View>
+      {/* Header Light Theme Red Gradient */}
+      <LinearGradient
+        colors={['#DC2626', '#E11D48']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={styles.header}
+      >
+        <View style={styles.headerTop}>
+          <View style={styles.headerBrand}>
+            <View style={styles.crownWrap}>
+              <Ionicons name="shield-checkmark" size={22} color="#DC2626" />
             </View>
-            <Text style={styles.headerSub}>Montir Siaga Platform Management</Text>
+            <View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text style={styles.headerTitle}>OWNER PANEL</Text>
+                <View style={styles.adminBadge}>
+                  <Text style={styles.adminBadgeText}>SUPER ADMIN</Text>
+                </View>
+              </View>
+              <Text style={styles.headerSub}>Montir Siaga Platform Management</Text>
+            </View>
           </View>
         </View>
 
-        {/* Tab Sub-navigation */}
-        <View style={styles.tabsRow}>
+        {/* Tab Row */}
+        <View style={styles.tabRow}>
           <TouchableOpacity
-            style={[styles.subTab, activeTab === 'analytics' && styles.subTabActive]}
+            style={[styles.tabBtn, activeTab === 'analytics' && styles.tabBtnActive]}
             onPress={() => setActiveTab('analytics')}
           >
-            <Text style={[styles.subTabText, activeTab === 'analytics' && styles.subTabTextActive]}>
+            <Text style={[styles.tabText, activeTab === 'analytics' && styles.tabTextActive]}>
               📊 Omzet & Finansial
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.subTab, activeTab === 'mechanics' && styles.subTabActive]}
+            style={[styles.tabBtn, activeTab === 'mechanics' && styles.tabBtnActive]}
             onPress={() => setActiveTab('mechanics')}
           >
-            <Text style={[styles.subTabText, activeTab === 'mechanics' && styles.subTabTextActive]}>
+            <Text style={[styles.tabText, activeTab === 'mechanics' && styles.tabTextActive]}>
               🔧 Mitra Montir ({mechanics.length})
             </Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </LinearGradient>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* ================= TAB 1: ANALYTICS & REVENUE ================= */}
+        {/* ================= TAB 1: ANALYTICS ================= */}
         {activeTab === 'analytics' && (
           <View>
-            {/* Net Revenue for Owner */}
+            {/* Pure Admin Revenue for Owner */}
             <View style={styles.revenueCard}>
-              <Text style={styles.revenueLabel}>KEUNTUNGAN BERSIH OWNER (KOMISI 15%)</Text>
-              <Text style={styles.revenueValue}>{formatRupiah(platformStats.platformNetRevenue)}</Text>
-              <Text style={styles.revenueMeta}>
-                Otomatis dipotong 15% dari setiap pesanan yang selesai
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Ionicons name="cash" size={20} color="#16A34A" />
+                <Text style={styles.revenueLabel}>PENDAPATAN MURNI OWNER (ADMIN PEMANGGILAN)</Text>
+              </View>
+              <Text style={styles.revenueVal}>{formatRupiah(platformStats.platformNetRevenue)}</Text>
+              <Text style={styles.revenueSub}>
+                Pure Rp 10.000 / order dari MontirPay. Selebihnya uang jasa 100% milik montir via QRIS.
               </Text>
             </View>
 
-            {/* Platform Metrics Grid */}
+            {/* Metrics Grid */}
             <View style={styles.metricGrid}>
               <View style={styles.metricCard}>
-                <Text style={styles.metricLabel}>Total Perputaran Jasa (GMV)</Text>
-                <Text style={styles.metricVal}>{formatRupiah(platformStats.totalGrossRevenue)}</Text>
-                <Text style={styles.metricSub}>Gross transaksi pengguna</Text>
+                <Text style={styles.metricLabel}>Total Pesanan Masuk</Text>
+                <Text style={styles.metricVal}>{platformStats.totalOrders} Order</Text>
+                <Text style={styles.metricSub}>99.4% Tingkat Keberhasilan</Text>
               </View>
               <View style={styles.metricCard}>
-                <Text style={styles.metricLabel}>Total Pesanan Darurat</Text>
-                <Text style={styles.metricVal}>{platformStats.totalOrders} Order</Text>
-                <Text style={styles.metricSub}>98.4% Tingkat Sukses</Text>
+                <Text style={styles.metricLabel}>Biaya Admin Per Order</Text>
+                <Text style={[styles.metricVal, { color: '#DC2626' }]}>Rp 10.000</Text>
+                <Text style={styles.metricSub}>Pure Masuk Kas Owner</Text>
               </View>
             </View>
 
             {/* Live Order Monitor */}
-            <View style={styles.liveMonitorCard}>
+            <View style={styles.monitorCard}>
               <View style={styles.monitorHeader}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <View style={styles.pulseDot} />
-                  <Text style={styles.monitorTitle}>MONITOR PESANAN AKTIF SAAT INI</Text>
+                  <View style={[styles.pulseDot, { backgroundColor: activeOrder ? '#10B981' : '#CBD5E1' }]} />
+                  <Text style={styles.monitorTitle}>MONITOR PESANAN AKTIF</Text>
                 </View>
-                <Text style={styles.monitorStatusBadge}>
-                  {activeOrder ? activeOrder.status.toUpperCase() : 'STANDBY'}
-                </Text>
+                <View style={[styles.statusTag, { backgroundColor: activeOrder ? '#FEE2E2' : '#F1F5F9' }]}>
+                  <Text style={[styles.statusTagText, { color: activeOrder ? '#DC2626' : '#64748B' }]}>
+                    {activeOrder ? activeOrder.status.toUpperCase() : 'STANDBY'}
+                  </Text>
+                </View>
               </View>
 
               {activeOrder ? (
-                <View style={styles.activeOrderBox}>
-                  <View style={styles.orderInfoRow}>
-                    <Text style={styles.orderInfoLabel}>ID Pesanan:</Text>
-                    <Text style={styles.orderInfoVal}>#{activeOrder.id}</Text>
+                <View style={styles.orderDetailsBox}>
+                  <View style={styles.orderRow}>
+                    <Text style={styles.orderLabel}>ID Pesanan:</Text>
+                    <Text style={styles.orderValBold}>#{activeOrder.id}</Text>
                   </View>
-                  <View style={styles.orderInfoRow}>
-                    <Text style={styles.orderInfoLabel}>Kendala:</Text>
-                    <Text style={styles.orderInfoVal}>{activeOrder.service?.title}</Text>
+                  <View style={styles.orderRow}>
+                    <Text style={styles.orderLabel}>Kendala:</Text>
+                    <Text style={styles.orderVal}>{activeOrder.service?.title}</Text>
                   </View>
-                  <View style={styles.orderInfoRow}>
-                    <Text style={styles.orderInfoLabel}>Lokasi:</Text>
-                    <Text style={[styles.orderInfoVal, { flex: 1, textAlign: 'right' }]} numberOfLines={1}>
-                      {activeOrder.userAddress}
+                  <View style={styles.orderRow}>
+                    <Text style={styles.orderLabel}>Mobil:</Text>
+                    <Text style={styles.orderVal}>{activeOrder.vehicle}</Text>
+                  </View>
+                  <View style={styles.orderRow}>
+                    <Text style={styles.orderLabel}>Admin Owner APK:</Text>
+                    <Text style={[styles.orderVal, { color: '#10B981', fontWeight: 'bold' }]}>
+                      Rp 10.000 (LUNAS via MontirPay)
                     </Text>
                   </View>
-                  <View style={styles.orderInfoRow}>
-                    <Text style={styles.orderInfoLabel}>Montir Bertugas:</Text>
-                    <Text style={[styles.orderInfoVal, { color: '#38bdf8' }]}>
-                      {activeOrder.mechanic?.name || 'Sedang Mencari...'}
+                  <View style={styles.orderRow}>
+                    <Text style={styles.orderLabel}>Tagihan QRIS Montir:</Text>
+                    <Text style={[styles.orderVal, { color: '#DC2626', fontWeight: 'bold' }]}>
+                      {formatRupiah(activeOrder.mechanicBillAmount || activeOrder.mechanicEstimatedFee)} ({activeOrder.qrisPaid ? 'LUNAS' : 'MENUNGGU BAYAR'})
                     </Text>
-                  </View>
-                  <View style={styles.orderFeeRow}>
-                    <View>
-                      <Text style={styles.feeSubLabel}>Total Tagihan</Text>
-                      <Text style={styles.feeVal}>{formatRupiah(activeOrder.price)}</Text>
-                    </View>
-                    <View style={{ alignItems: 'flex-end' }}>
-                      <Text style={styles.feeSubLabel}>Komisi Owner (15%)</Text>
-                      <Text style={[styles.feeVal, { color: '#10b981' }]}>
-                        +{formatRupiah(activeOrder.platformFee)}
-                      </Text>
-                    </View>
                   </View>
                 </View>
               ) : (
-                <View style={styles.emptyMonitorBox}>
-                  <Text style={{ fontSize: 24 }}>🛰️</Text>
-                  <Text style={styles.emptyMonitorText}>Belum ada panggilan darurat aktif saat ini.</Text>
+                <View style={styles.emptyMonitor}>
+                  <Ionicons name="checkmark-circle-outline" size={32} color="#CBD5E1" />
+                  <Text style={styles.emptyText}>Tidak ada pesanan darurat yang sedang berjalan saat ini.</Text>
                 </View>
               )}
-            </View>
-
-            {/* Platform Settings Quick Access */}
-            <View style={styles.settingsCard}>
-              <Text style={styles.settingsTitle}>KONFIGURASI SISTEM BISNIS</Text>
-              <View style={styles.settingRow}>
-                <View>
-                  <Text style={styles.settingName}>Bagi Hasil Platform</Text>
-                  <Text style={styles.settingDesc}>15% Owner, 85% Montir Mitra</Text>
-                </View>
-                <TouchableOpacity
-                  style={styles.settingBtn}
-                  onPress={() => Alert.alert('Komisi Platform', 'Persentase komisi saat ini dikunci 15% untuk fase promo MVP.')}
-                >
-                  <Text style={styles.settingBtnText}>Atur</Text>
-                </TouchableOpacity>
-              </View>
-              <View style={styles.settingRow}>
-                <View>
-                  <Text style={styles.settingName}>Radius Broadcast Sinyal Darurat</Text>
-                  <Text style={styles.settingDesc}>Maksimal 5 km dari titik GPS mobil</Text>
-                </View>
-                <TouchableOpacity
-                  style={styles.settingBtn}
-                  onPress={() => Alert.alert('Radius GPS', 'Radius broadcast montir disetel ke 5 km.')}
-                >
-                  <Text style={styles.settingBtnText}>Ubah</Text>
-                </TouchableOpacity>
-              </View>
             </View>
           </View>
         )}
 
-        {/* ================= TAB 2: MECHANIC VERIFICATION ================= */}
+        {/* ================= TAB 2: MECHANICS ================= */}
         {activeTab === 'mechanics' && (
-          <View>
-            <Text style={styles.sectionTitle}>VERIFIKASI & APPROVAL MITRA MEKANIK</Text>
-            <Text style={styles.sectionDesc}>
-              Hanya montir terverifikasi dengan sertifikasi resmi yang dapat menerima pesanan darurat.
-            </Text>
-
+          <View style={{ gap: 12 }}>
             {mechanics.map((m) => (
-              <View key={m.id} style={styles.mechanicItemCard}>
-                <View style={styles.mechanicTop}>
-                  <View style={styles.mechanicAvatar}>
-                    <Text style={{ fontSize: 22 }}>👨🏻‍🔧</Text>
+              <View key={m.id} style={styles.mechCard}>
+                <View style={styles.mechCardTop}>
+                  <View style={styles.mechAvatarCircle}>
+                    <Ionicons name="construct" size={20} color="#DC2626" />
                   </View>
-                  <View style={{ flex: 1, marginLeft: 10 }}>
+                  <View style={{ flex: 1, marginLeft: 12 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Text style={styles.mechanicNameText}>{m.name}</Text>
-                      {m.verified ? (
-                        <View style={styles.verifiedPill}>
-                          <Text style={styles.verifiedPillText}>TERVERIFIKASI</Text>
-                        </View>
-                      ) : (
-                        <View style={styles.unverifiedPill}>
-                          <Text style={styles.unverifiedPillText}>PENDING</Text>
+                      <Text style={styles.mechName}>{m.name}</Text>
+                      {m.verified && (
+                        <View style={styles.verifiedBadge}>
+                          <Text style={styles.verifiedText}>TERVERIFIKASI</Text>
                         </View>
                       )}
                     </View>
-                    <Text style={styles.mechanicSpecialty}>{m.specialty}</Text>
-                    <Text style={styles.mechanicVehicleText}>🛵 {m.vehicle}</Text>
+                    <Text style={styles.mechVehicle}>🛵 {m.vehicle}</Text>
+                    <Text style={styles.mechStats}>⭐ {m.rating} • {m.jobsCompleted} Servis</Text>
                   </View>
                 </View>
 
-                <View style={styles.mechanicStatsRow}>
-                  <Text style={styles.mechStatText}>Rating: ⭐ {m.rating}</Text>
-                  <Text style={styles.mechStatText}>Pekerjaan: {m.jobsCompleted}x</Text>
-                  <Text style={styles.mechStatText}>Saldo: {formatRupiah(m.walletBalance)}</Text>
-                </View>
-
-                {/* Verification Action */}
-                <View style={styles.mechanicActionRow}>
+                <View style={styles.mechCardBottom}>
+                  <View>
+                    <Text style={styles.walletLabel}>Saldo Dompet Montir (Hasil QRIS 100%):</Text>
+                    <Text style={styles.walletAmount}>{formatRupiah(m.walletBalance)}</Text>
+                  </View>
                   <TouchableOpacity
-                    style={[
-                      styles.toggleVerifBtn,
-                      m.verified ? styles.revokeBtn : styles.approveBtn,
-                    ]}
-                    onPress={() => {
-                      toggleMechanicVerification(m.id);
-                      Alert.alert(
-                        'Status Diperbarui',
-                        `${m.name} sekarang berstatus: ${!m.verified ? 'TERVERIFIKASI ✅' : 'PENDING APPROVAL ⚠️'}`
-                      );
-                    }}
+                    style={styles.detailBtn}
+                    onPress={() => Alert.alert('Mitra Montir', `Profil ${m.name}\nNo HP: ${m.phone}\nSpesialis: ${m.specialty}`)}
                   >
-                    <Text style={styles.toggleVerifText}>
-                      {m.verified ? 'Cabut Akses Verifikasi' : 'Setujui & Verifikasi Montir'}
-                    </Text>
+                    <Text style={styles.detailBtnText}>Lihat Detail</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -246,101 +199,111 @@ export default function OwnerView() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0a0f1d',
+    backgroundColor: '#F8FAFC',
   },
   header: {
-    backgroundColor: '#0f172a',
     paddingHorizontal: 16,
     paddingTop: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1e293b',
+    paddingBottom: 16,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
-  headerRow: {
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  headerBrand: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    gap: 10,
   },
-  logoBox: {
-    width: 40,
-    height: 40,
+  crownWrap: {
+    width: 36,
+    height: 36,
     borderRadius: 12,
-    backgroundColor: '#1e293b',
-    borderWidth: 1.5,
-    borderColor: '#eab308',
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
   },
   headerTitle: {
-    color: '#ffffff',
-    fontSize: 14,
+    color: '#FFFFFF',
+    fontSize: 16,
     fontWeight: '900',
     letterSpacing: 0.5,
   },
-  adminTag: {
-    backgroundColor: 'rgba(234, 179, 8, 0.2)',
+  adminBadge: {
+    backgroundColor: 'rgba(255,255,255,0.25)',
     paddingHorizontal: 6,
     paddingVertical: 1,
     borderRadius: 4,
   },
-  adminTagText: {
-    color: '#facc15',
+  adminBadgeText: {
+    color: '#FFFFFF',
     fontSize: 8.5,
     fontWeight: '900',
   },
   headerSub: {
-    color: '#94a3b8',
-    fontSize: 10.5,
+    color: '#FEE2E2',
+    fontSize: 11,
   },
-  tabsRow: {
+  tabRow: {
     flexDirection: 'row',
-    gap: 8,
+    backgroundColor: 'rgba(0,0,0,0.15)',
+    borderRadius: 12,
+    padding: 3,
   },
-  subTab: {
+  tabBtn: {
+    flex: 1,
     paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
+    alignItems: 'center',
+    borderRadius: 10,
   },
-  subTabActive: {
-    borderBottomColor: '#eab308',
+  tabBtnActive: {
+    backgroundColor: '#FFFFFF',
   },
-  subTabText: {
-    color: '#94a3b8',
+  tabText: {
+    color: '#FEE2E2',
     fontSize: 11.5,
-    fontWeight: '600',
+    fontWeight: '700',
   },
-  subTabTextActive: {
-    color: '#facc15',
+  tabTextActive: {
+    color: '#DC2626',
     fontWeight: '800',
   },
   content: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 14,
+    padding: 16,
   },
   revenueCard: {
-    backgroundColor: '#1e293b',
+    backgroundColor: '#FFFFFF',
     borderRadius: 18,
     padding: 16,
-    borderWidth: 1.5,
-    borderColor: '#eab308',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
     marginBottom: 12,
   },
   revenueLabel: {
-    color: '#facc15',
-    fontSize: 10,
+    color: '#16A34A',
+    fontSize: 10.5,
     fontWeight: '800',
     letterSpacing: 0.5,
   },
-  revenueValue: {
-    color: '#ffffff',
-    fontSize: 26,
+  revenueVal: {
+    color: '#0F172A',
+    fontSize: 24,
     fontWeight: '900',
-    marginTop: 4,
+    marginTop: 6,
   },
-  revenueMeta: {
-    color: '#94a3b8',
-    fontSize: 10.5,
+  revenueSub: {
+    color: '#64748B',
+    fontSize: 11,
     marginTop: 4,
   },
   metricGrid: {
@@ -350,246 +313,168 @@ const styles = StyleSheet.create({
   },
   metricCard: {
     flex: 1,
-    backgroundColor: '#1e293b',
-    borderRadius: 14,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#334155',
-  },
-  metricLabel: {
-    color: '#94a3b8',
-    fontSize: 9.5,
-    fontWeight: '600',
-  },
-  metricVal: {
-    color: '#f8fafc',
-    fontSize: 14,
-    fontWeight: '800',
-    marginTop: 4,
-  },
-  metricSub: {
-    color: '#64748b',
-    fontSize: 9,
-    marginTop: 2,
-  },
-  liveMonitorCard: {
-    backgroundColor: '#131d2e',
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#1e293b',
-    marginBottom: 14,
+    borderColor: '#E2E8F0',
+  },
+  metricLabel: {
+    color: '#64748B',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  metricVal: {
+    color: '#0F172A',
+    fontSize: 16,
+    fontWeight: '900',
+    marginTop: 4,
+  },
+  metricSub: {
+    color: '#94A3B8',
+    fontSize: 9.5,
+    marginTop: 2,
+  },
+  monitorCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   monitorHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 12,
   },
   pulseDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#10b981',
   },
   monitorTitle: {
-    color: '#ffffff',
-    fontSize: 10.5,
+    color: '#0F172A',
+    fontSize: 11,
     fontWeight: '800',
     letterSpacing: 0.5,
   },
-  monitorStatusBadge: {
-    backgroundColor: '#334155',
-    color: '#38bdf8',
-    fontSize: 9,
-    fontWeight: 'bold',
-    paddingHorizontal: 6,
+  statusTag: {
+    paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 6,
   },
-  activeOrderBox: {
-    backgroundColor: '#0f172a',
-    borderRadius: 12,
+  statusTagText: {
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  orderDetailsBox: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 14,
     padding: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
-  orderInfoRow: {
+  orderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 6,
+    paddingVertical: 4,
   },
-  orderInfoLabel: {
-    color: '#94a3b8',
+  orderLabel: {
+    color: '#64748B',
     fontSize: 11,
   },
-  orderInfoVal: {
-    color: '#f8fafc',
+  orderVal: {
+    color: '#0F172A',
     fontSize: 11,
     fontWeight: '600',
   },
-  orderFeeRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 8,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#334155',
-  },
-  feeSubLabel: {
-    color: '#94a3b8',
-    fontSize: 9.5,
-  },
-  feeVal: {
-    color: '#f8fafc',
-    fontSize: 13,
-    fontWeight: 'bold',
-  },
-  emptyMonitorBox: {
-    alignItems: 'center',
-    paddingVertical: 18,
-  },
-  emptyMonitorText: {
-    color: '#64748b',
-    fontSize: 11,
-    marginTop: 6,
-  },
-  settingsCard: {
-    backgroundColor: '#1e293b',
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#334155',
-    marginBottom: 20,
-  },
-  settingsTitle: {
-    color: '#94a3b8',
-    fontSize: 10,
-    fontWeight: '800',
-    marginBottom: 10,
-  },
-  settingRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
-  },
-  settingName: {
-    color: '#ffffff',
+  orderValBold: {
+    color: '#DC2626',
     fontSize: 12,
-    fontWeight: '600',
-  },
-  settingDesc: {
-    color: '#64748b',
-    fontSize: 10,
-  },
-  settingBtn: {
-    backgroundColor: '#334155',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  settingBtnText: {
-    color: '#38bdf8',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  // Mechanics Tab
-  sectionTitle: {
-    color: '#ffffff',
-    fontSize: 13,
     fontWeight: '800',
-    marginBottom: 2,
   },
-  sectionDesc: {
-    color: '#94a3b8',
-    fontSize: 10.5,
-    marginBottom: 12,
+  emptyMonitor: {
+    alignItems: 'center',
+    paddingVertical: 20,
+    gap: 8,
   },
-  mechanicItemCard: {
-    backgroundColor: '#1e293b',
+  emptyText: {
+    color: '#94A3B8',
+    fontSize: 11,
+    textAlign: 'center',
+  },
+  mechCard: {
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#334155',
-    marginBottom: 10,
+    borderColor: '#E2E8F0',
   },
-  mechanicTop: {
+  mechCardTop: {
     flexDirection: 'row',
     alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    paddingBottom: 10,
   },
-  mechanicAvatar: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: '#334155',
+  mechAvatarCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FEE2E2',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  mechanicNameText: {
-    color: '#ffffff',
+  mechName: {
+    color: '#0F172A',
     fontSize: 13,
-    fontWeight: 'bold',
+    fontWeight: '800',
   },
-  verifiedPill: {
-    backgroundColor: 'rgba(16, 185, 129, 0.2)',
+  verifiedBadge: {
+    backgroundColor: '#DCFCE7',
     paddingHorizontal: 5,
     paddingVertical: 1,
     borderRadius: 4,
   },
-  verifiedPillText: {
-    color: '#34d399',
+  verifiedText: {
+    color: '#16A34A',
     fontSize: 8,
     fontWeight: '800',
   },
-  unverifiedPill: {
-    backgroundColor: 'rgba(239, 68, 68, 0.2)',
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-    borderRadius: 4,
-  },
-  unverifiedPillText: {
-    color: '#f87171',
-    fontSize: 8,
-    fontWeight: '800',
-  },
-  mechanicSpecialty: {
-    color: '#f59e0b',
+  mechVehicle: {
+    color: '#64748B',
     fontSize: 10.5,
     marginTop: 2,
   },
-  mechanicVehicleText: {
-    color: '#94a3b8',
-    fontSize: 10.5,
+  mechStats: {
+    color: '#94A3B8',
+    fontSize: 10,
+    marginTop: 1,
   },
-  mechanicStatsRow: {
+  mechCardBottom: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    backgroundColor: '#0f172a',
-    borderRadius: 8,
-    padding: 8,
-    marginVertical: 10,
-  },
-  mechStatText: {
-    color: '#cbd5e1',
-    fontSize: 10,
-  },
-  mechanicActionRow: {
-    marginTop: 2,
-  },
-  toggleVerifBtn: {
-    paddingVertical: 8,
-    borderRadius: 8,
     alignItems: 'center',
+    paddingTop: 10,
   },
-  approveBtn: {
-    backgroundColor: '#10b981',
+  walletLabel: {
+    color: '#64748B',
+    fontSize: 9.5,
   },
-  revokeBtn: {
-    backgroundColor: '#334155',
+  walletAmount: {
+    color: '#0F172A',
+    fontSize: 13,
+    fontWeight: '800',
   },
-  toggleVerifText: {
-    color: '#ffffff',
+  detailBtn: {
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  detailBtnText: {
+    color: '#DC2626',
     fontSize: 11,
     fontWeight: '700',
   },

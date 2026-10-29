@@ -10,73 +10,111 @@ import {
   Dimensions,
   Alert,
   Modal,
+  Platform,
 } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useApp, EMERGENCY_SERVICES } from '../context/AppContext';
 import { useGPSLocation } from '../hooks/useGPSLocation';
-import PaymentModal from './PaymentModal';
+import GojekMapView from './GojekMapView';
 
-const { width } = Dimensions.get('window');
+const { width, height: screenHeight } = Dimensions.get('window');
 
 export default function DriverView() {
   const {
     activeOrder,
     createOrder,
-    updateOrderStatus,
+    cancelOrder,
+    payQrisBill,
     resetOrder,
+    driverWallet,
+    topUpDriverWallet,
+    mechanics,
     chatMessages,
     addChatMessage,
   } = useApp();
 
-  const { address, status: gpsStatus, refreshLocation, setAddress } = useGPSLocation();
+  const { location, address, status: gpsStatus, refreshLocation } = useGPSLocation();
 
   const [selectedService, setSelectedService] = useState(EMERGENCY_SERVICES[0]);
   const [vehicle, setVehicle] = useState('Toyota Avanza 1.3 G (B 1234 SKA)');
   const [problemNote, setProblemNote] = useState('');
-  const [paymentVisible, setPaymentVisible] = useState(false);
+  const [topUpModalVisible, setTopUpModalVisible] = useState(false);
   const [chatVisible, setChatVisible] = useState(false);
   const [chatInput, setChatInput] = useState('');
+  const [qrisModalVisible, setQrisModalVisible] = useState(false);
 
-  // Radar Animation for Searching
-  const pulseAnim1 = useRef(new Animated.Value(0.6)).current;
-  const pulseAnim2 = useRef(new Animated.Value(0.6)).current;
-
-  // Mechanic Map Animation
-  const mapMoveAnim = useRef(new Animated.Value(0)).current;
+  // Radar Pulse Animation for Searching State
+  const pulse1 = useRef(new Animated.Value(0.5)).current;
+  const pulse2 = useRef(new Animated.Value(0.5)).current;
 
   useEffect(() => {
     if (activeOrder?.status === 'searching') {
-      const loop = Animated.loop(
-        Animated.parallel([
-          Animated.sequence([
-            Animated.timing(pulseAnim1, { toValue: 2.2, duration: 1800, useNativeDriver: true }),
-            Animated.timing(pulseAnim1, { toValue: 0.6, duration: 0, useNativeDriver: true }),
-          ]),
-          Animated.sequence([
-            Animated.delay(600),
-            Animated.timing(pulseAnim2, { toValue: 2.2, duration: 1800, useNativeDriver: true }),
-            Animated.timing(pulseAnim2, { toValue: 0.6, duration: 0, useNativeDriver: true }),
-          ]),
-        ])
+      const createPulse = (anim, delay) => {
+        return Animated.sequence([
+          Animated.delay(delay),
+          Animated.loop(
+            Animated.sequence([
+              Animated.timing(anim, { toValue: 2.4, duration: 2000, useNativeDriver: true }),
+              Animated.timing(anim, { toValue: 0.5, duration: 0, useNativeDriver: true }),
+            ])
+          ),
+        ]);
+      };
+
+      const p1 = createPulse(pulse1, 0);
+      const p2 = createPulse(pulse2, 800);
+      p1.start();
+      p2.start();
+
+      return () => {
+        p1.stop();
+        p2.stop();
+      };
+    }
+  }, [activeOrder?.status]);
+
+  const formatRupiah = (val) => 'Rp ' + Number(val || 0).toLocaleString('id-ID');
+
+  const handlePayAndCall = async () => {
+    if (driverWallet < 10000) {
+      Alert.alert(
+        'Saldo MontirPay Kurang',
+        `Saldo MontirPay Anda saat ini ${formatRupiah(driverWallet)}. Diperlukan Rp 10.000 (biaya admin platform pemanggilan) untuk memanggil montir. Lakukan isi saldo sekarang?`,
+        [
+          { text: 'Batal', style: 'cancel' },
+          { text: 'Isi Saldo', onPress: () => setTopUpModalVisible(true) },
+        ]
       );
-      loop.start();
-      return () => loop.stop();
+      return;
     }
-  }, [activeOrder?.status]);
 
-  useEffect(() => {
-    if (activeOrder?.status === 'assigned') {
-      Animated.timing(mapMoveAnim, {
-        toValue: 1,
-        duration: 20000,
-        useNativeDriver: false,
-      }).start();
-    } else {
-      mapMoveAnim.setValue(0);
-    }
-  }, [activeOrder?.status]);
+    Alert.alert(
+      'Konfirmasi MontirPay',
+      `Potong saldo MontirPay Rp 10.000 untuk biaya admin platform?\n\n(Biaya jasa perbaikan nantinya ditagihkan montir via QRIS di tempat setelah selesai)`,
+      [
+        { text: 'Batal', style: 'cancel' },
+        {
+          text: 'Bayar & Panggil',
+          onPress: async () => {
+            const userCoords = location || { latitude: -6.2255, longitude: 106.8120 };
+            const res = await createOrder(selectedService, address, userCoords, vehicle, problemNote);
+            if (!res.success && res.error === 'SALDO_KURANG') {
+              setTopUpModalVisible(true);
+            }
+          },
+        },
+      ]
+    );
+  };
 
-  const handleOrderSubmit = () => {
-    createOrder(selectedService, address, null, vehicle, problemNote);
+  const handleConfirmPayQris = () => {
+    payQrisBill();
+    setQrisModalVisible(false);
+    Alert.alert(
+      'Pembayaran QRIS Berhasil! 🎉',
+      `Pembayaran sebesar ${formatRupiah(activeOrder?.mechanicBillAmount)} telah diterima langsung oleh ${activeOrder?.mechanic?.name || 'Montir'}.`
+    );
   };
 
   const handleSendMessage = () => {
@@ -85,397 +123,217 @@ export default function DriverView() {
     setChatInput('');
   };
 
-  const mechanicTranslateX = mapMoveAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [20, width - 110],
-  });
-
-  const formatRupiah = (val) => 'Rp ' + Number(val || 0).toLocaleString('id-ID');
-
-  // ================= SCENARIO 1: NO ACTIVE ORDER (HOME SCREEN) =================
+  // ================= SCENARIO 1: HOME ORDER SCREEN (ALA GOJEK) =================
   if (!activeOrder) {
+    const mapHeight = screenHeight * 0.46;
+
     return (
       <View style={styles.container}>
-        {/* Top Header */}
-        <View style={styles.header}>
-          <View style={styles.headerTop}>
-            <View style={styles.brandGroup}>
-              <View style={styles.brandIcon}>
-                <Text style={{ fontSize: 18 }}>🚗</Text>
+        {/* Top Real Street Map (Gojek Styled) */}
+        <View style={{ height: mapHeight, width: '100%', position: 'relative' }}>
+          <GojekMapView
+            userCoords={location || { latitude: -6.2255, longitude: 106.8120 }}
+            mechanics={mechanics}
+            orderStatus="idle"
+            showRadar={false}
+            height="100%"
+          />
+
+          {/* Floating Gojek Top Header */}
+          <View style={styles.floatingTopBar}>
+            {/* MontirPay Balance Pill */}
+            <TouchableOpacity
+              style={styles.montirPayPill}
+              activeOpacity={0.85}
+              onPress={() => setTopUpModalVisible(true)}
+            >
+              <View style={styles.montirPayIcon}>
+                <Ionicons name="wallet" size={14} color="#FFFFFF" />
               </View>
               <View>
-                <Text style={styles.brandTitle}>MONTIR SIAGA</Text>
-                <Text style={styles.brandSubtitle}>Driver / Pengguna Mobil Mogok</Text>
+                <Text style={styles.montirPayLabel}>MontirPay</Text>
+                <Text style={styles.montirPayValue}>{formatRupiah(driverWallet)}</Text>
               </View>
-            </View>
-            <View style={styles.driverTag}>
-              <Text style={styles.driverTagText}>CUSTOMER</Text>
+              <View style={styles.topUpBadge}>
+                <Text style={styles.topUpBadgeText}>+ Top Up</Text>
+              </View>
+            </TouchableOpacity>
+
+            {/* 24 Jam SOS Badge */}
+            <View style={styles.sosBadge}>
+              <View style={styles.greenLiveDot} />
+              <Text style={styles.sosBadgeText}>MONTIR SIAGA 24 JAM</Text>
             </View>
           </View>
 
-          {/* Real GPS Location Card */}
-          <View style={styles.gpsCard}>
-            <View style={styles.gpsIconBox}>
-              <Text style={{ fontSize: 13 }}>📍</Text>
+          {/* Floating Pickup Location Card */}
+          <View style={styles.floatingPickupCard}>
+            <View style={styles.pickupPinBox}>
+              <Ionicons name="location" size={18} color="#DC2626" />
             </View>
             <View style={{ flex: 1 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                <Text style={styles.gpsTitle}>LOKASI MOBIL ANDA (GPS REAL-TIME)</Text>
-                {gpsStatus === 'ready' && <View style={styles.gpsActiveDot} />}
-              </View>
-              <Text style={styles.gpsAddress} numberOfLines={2}>
+              <Text style={styles.pickupLabel}>LOKASI MOBIL MOGOK (GPS)</Text>
+              <Text style={styles.pickupAddress} numberOfLines={1}>
                 {address}
               </Text>
             </View>
-            <TouchableOpacity onPress={refreshLocation} style={styles.gpsRefreshBtn}>
-              <Text style={styles.gpsRefreshText}>🔄 GPS</Text>
+            <TouchableOpacity onPress={refreshLocation} style={styles.refreshLocBtn}>
+              <Ionicons name="sync" size={14} color="#DC2626" />
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Scroll Content */}
-        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-          {/* Vehicle Selector */}
-          <View style={styles.vehicleCard}>
-            <Text style={{ fontSize: 22, marginRight: 10 }}>🚘</Text>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.vehicleLabel}>KENDARAAN ANDA</Text>
-              <Text style={styles.vehicleValue}>{vehicle}</Text>
+        {/* Gojek Bottom Sheet (White Card with Drag Indicator) */}
+        <View style={styles.bottomSheet}>
+          <View style={styles.dragHandle} />
+
+          <ScrollView style={styles.sheetScroll} showsVerticalScrollIndicator={false}>
+            {/* Vehicle Selector Pill */}
+            <View style={styles.vehiclePill}>
+              <Ionicons name="car-sport" size={16} color="#DC2626" />
+              <Text style={styles.vehicleName} numberOfLines={1}>
+                {vehicle}
+              </Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setVehicle((prev) =>
+                    prev.includes('Avanza')
+                      ? 'Honda HR-V 1.5 RS (B 9999 VIP)'
+                      : 'Toyota Avanza 1.3 G (B 1234 SKA)'
+                  );
+                }}
+              >
+                <Text style={styles.changeLink}>Ganti</Text>
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity
-              onPress={() => {
-                setVehicle((prev) =>
-                  prev.includes('Avanza')
-                    ? 'Honda HR-V 1.5 RS (B 9999 VIP)'
-                    : 'Toyota Avanza 1.3 G (B 1234 SKA)'
-                );
-              }}
-            >
-              <Text style={styles.vehicleChange}>Ganti</Text>
-            </TouchableOpacity>
-          </View>
 
-          {/* Category Selector */}
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>PILIH JENIS KENDALA MOBIL</Text>
-            <Text style={styles.sectionMeta}>Tarif Tetap & Transparan</Text>
-          </View>
+            {/* Emergency Services Title */}
+            <View style={styles.sectionTitleRow}>
+              <Text style={styles.sectionTitleText}>PILIH LAYANAN DARURAT</Text>
+              <Text style={styles.sectionSubtitleText}>Estimasi Jasa</Text>
+            </View>
 
-          <View style={styles.grid}>
-            {EMERGENCY_SERVICES.map((s) => {
-              const isSelected = selectedService.id === s.id;
-              return (
-                <TouchableOpacity
-                  key={s.id}
-                  activeOpacity={0.8}
-                  onPress={() => setSelectedService(s)}
-                  style={[styles.serviceCard, isSelected && styles.serviceSelected]}
-                >
-                  <View style={styles.serviceTop}>
-                    <View style={[styles.serviceIconBox, isSelected && styles.serviceIconSelected]}>
-                      <Text style={{ fontSize: 18 }}>{s.icon}</Text>
+            {/* Services Grid (Gojek Style) */}
+            <View style={styles.servicesGrid}>
+              {EMERGENCY_SERVICES.map((s) => {
+                const isSelected = selectedService.id === s.id;
+                return (
+                  <TouchableOpacity
+                    key={s.id}
+                    activeOpacity={0.85}
+                    onPress={() => setSelectedService(s)}
+                    style={[styles.serviceBox, isSelected && styles.serviceBoxSelected]}
+                  >
+                    <View style={[styles.serviceIconWrap, isSelected && styles.serviceIconSelected]}>
+                      <Ionicons
+                        name={s.iconName || 'construct-outline'}
+                        size={20}
+                        color={isSelected ? '#FFFFFF' : '#DC2626'}
+                      />
                     </View>
-                    {s.badge && (
-                      <View style={styles.badgePill}>
-                        <Text style={styles.badgePillText}>{s.badge}</Text>
-                      </View>
-                    )}
-                  </View>
-                  <Text style={styles.serviceTitle}>{s.title}</Text>
-                  <Text style={styles.serviceDesc} numberOfLines={2}>
-                    {s.desc}
-                  </Text>
-                  <View style={styles.serviceBottom}>
-                    <Text style={styles.servicePrice}>{formatRupiah(s.price)}</Text>
-                    <Text style={styles.serviceEta}>~{s.eta}</Text>
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-
-          {/* Note input */}
-          <View style={styles.noteBox}>
-            <Text style={{ fontSize: 14, marginRight: 8 }}>📝</Text>
-            <TextInput
-              style={styles.noteInput}
-              placeholder="Catatan kendala: Bau gosong, mogok saat nanjak, dll..."
-              placeholderTextColor="#64748b"
-              value={problemNote}
-              onChangeText={setProblemNote}
-            />
-          </View>
-
-          {/* Safety advice */}
-          <View style={styles.safetyCard}>
-            <Text style={{ fontSize: 18, marginRight: 8 }}>⚠️</Text>
-            <Text style={styles.safetyText}>
-              <Text style={{ fontWeight: 'bold' }}>Protokol Aman: </Text>
-              Nyalakan lampu hazard dan pasang segitiga pengaman 30 meter di belakang mobil.
-            </Text>
-          </View>
-
-          <View style={{ height: 130 }} />
-        </ScrollView>
-
-        {/* Bottom CTA Bar */}
-        <View style={styles.bottomBar}>
-          <View style={styles.bottomRow}>
-            <View>
-              <Text style={styles.bottomMeta}>Estimasi Tiba:</Text>
-              <Text style={styles.bottomEta}>⚡ {selectedService.eta}</Text>
+                    <Text style={styles.serviceBoxTitle} numberOfLines={1}>
+                      {s.title}
+                    </Text>
+                    <Text style={styles.serviceBoxPrice}>~{formatRupiah(s.price)}</Text>
+                    <Text style={styles.serviceBoxEta}>~{s.eta}</Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
-            <View style={{ alignItems: 'flex-end' }}>
-              <Text style={styles.bottomMeta}>Total Jasa:</Text>
-              <Text style={styles.bottomPrice}>{formatRupiah(selectedService.price)}</Text>
+
+            {/* Problem Note */}
+            <View style={styles.noteInputWrap}>
+              <Ionicons name="create-outline" size={16} color="#64748B" />
+              <TextInput
+                style={styles.noteInput}
+                placeholder="Catatan kendala: Aki drop, baut ban macet, radiator ngebul..."
+                placeholderTextColor="#94A3B8"
+                value={problemNote}
+                onChangeText={setProblemNote}
+              />
             </View>
-          </View>
 
-          <TouchableOpacity
-            activeOpacity={0.85}
-            style={styles.ctaButton}
-            onPress={handleOrderSubmit}
-          >
-            <Text style={styles.ctaButtonText}>🚨 PANGGIL MONTIR TERDEKAT</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-  }
-
-  // ================= SCENARIO 2: SEARCHING FOR MECHANIC =================
-  if (activeOrder.status === 'searching') {
-    return (
-      <View style={styles.searchingContainer}>
-        <View style={styles.searchHeader}>
-          <View style={styles.siagaBadge}>
-            <View style={styles.pulseDot} />
-            <Text style={styles.siagaBadgeText}>SIAGA DARURAT RADIUS 3 KM</Text>
-          </View>
-          <Text style={styles.searchTitle}>Mencari Montir Terdekat...</Text>
-          <Text style={styles.searchSub}>
-            Sistem menyiarkan panggilan darurat ke montir mitra di sekitar Anda.
-          </Text>
-          <Text style={styles.searchTip}>
-            💡 Tips Testing: Buka tab <Text style={{ color: '#60a5fa', fontWeight: 'bold' }}>"Mekanik"</Text> di atas untuk menerima pesanan ini!
-          </Text>
-        </View>
-
-        {/* Center Radar */}
-        <View style={styles.radarCenter}>
-          <Animated.View
-            style={[
-              styles.radarRing,
-              {
-                transform: [{ scale: pulseAnim1 }],
-                opacity: pulseAnim1.interpolate({ inputRange: [0.6, 2.2], outputRange: [0.8, 0] }),
-              },
-            ]}
-          />
-          <Animated.View
-            style={[
-              styles.radarRing,
-              {
-                transform: [{ scale: pulseAnim2 }],
-                opacity: pulseAnim2.interpolate({ inputRange: [0.6, 2.2], outputRange: [0.8, 0] }),
-              },
-            ]}
-          />
-          <View style={styles.radarCarBox}>
-            <Text style={{ fontSize: 26 }}>🚗</Text>
-          </View>
-        </View>
-
-        {/* Order Details Preview */}
-        <View style={styles.searchDetailsCard}>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Kendala:</Text>
-            <Text style={styles.detailVal}>{activeOrder.service?.title}</Text>
-          </View>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Lokasi:</Text>
-            <Text style={[styles.detailVal, { flex: 1, textAlign: 'right' }]} numberOfLines={1}>
-              {activeOrder.userAddress}
-            </Text>
-          </View>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Estimasi Biaya:</Text>
-            <Text style={[styles.detailVal, { color: '#f59e0b', fontWeight: 'bold' }]}>
-              {formatRupiah(activeOrder.price)}
-            </Text>
-          </View>
-
-          <TouchableOpacity style={styles.cancelBtn} onPress={resetOrder}>
-            <Text style={styles.cancelBtnText}>Batalkan Panggilan</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-  }
-
-  // ================= SCENARIO 3: MECHANIC ASSIGNED / ON THE WAY / ARRIVED =================
-  if (['assigned', 'arrived', 'repairing'].includes(activeOrder.status)) {
-    const isArrived = activeOrder.status === 'arrived';
-    const isRepairing = activeOrder.status === 'repairing';
-
-    return (
-      <View style={styles.container}>
-        {/* Map Box */}
-        <View style={styles.mapBox}>
-          <View style={styles.mapStatusOverlay}>
-            <View style={styles.greenDot} />
-            <Text style={styles.mapStatusText}>
-              {isRepairing
-                ? 'Sedang Memperbaiki Mobil Anda'
-                : isArrived
-                ? 'Montir Telah Tiba di Lokasi!'
-                : 'Montir Menuju Lokasi'}
-            </Text>
-            <View style={styles.mapEtaPill}>
-              <Text style={styles.mapEtaText}>
-                {isRepairing ? 'Proses Servis' : isArrived ? 'TIBA' : 'ETA: 6 Menit'}
+            {/* Transparent Pricing Notice */}
+            <View style={styles.pricingNotice}>
+              <Ionicons name="shield-checkmark" size={16} color="#16A34A" />
+              <Text style={styles.pricingNoticeText}>
+                Biaya admin pemanggilan <Text style={{ fontWeight: 'bold' }}>Rp 10.000</Text> dipotong dari MontirPay. Jasa montir dibayar via QRIS setelah perbaikan selesai.
               </Text>
             </View>
-          </View>
 
-          {/* Visual Moving Mechanic */}
-          <Animated.View
-            style={[
-              styles.movingMarker,
-              { transform: [{ translateX: isArrived || isRepairing ? width - 110 : mechanicTranslateX }] },
-            ]}
-          >
-            <View style={styles.mechanicMarker}>
-              <Text style={{ fontSize: 18 }}>🏍️</Text>
-            </View>
-            <Text style={styles.markerText}>{activeOrder.mechanic?.name.split(' ')[1] || 'Montir'}</Text>
-          </Animated.View>
+            <View style={{ height: 100 }} />
+          </ScrollView>
 
-          {/* Stranded Car Marker */}
-          <View style={styles.carMarker}>
-            <View style={styles.carMarkerBox}>
-              <Text style={{ fontSize: 18 }}>🚗</Text>
-            </View>
-            <Text style={styles.markerText}>Mobil Anda</Text>
-          </View>
-
-          <View style={styles.mapStreet} />
-        </View>
-
-        {/* Bottom Sheet */}
-        <View style={styles.trackSheet}>
-          <View style={styles.sheetPill} />
-
-          {/* Mechanic Card */}
-          <View style={styles.profileCard}>
-            <View style={styles.profileAvatar}>
-              <Text style={{ fontSize: 24 }}>👨🏻‍🔧</Text>
-              <View style={styles.profileCheck}>
-                <Text style={{ fontSize: 8, color: '#fff' }}>✓</Text>
+          {/* Gojek Big Red CTA Button */}
+          <View style={styles.ctaBottomBar}>
+            <View style={styles.ctaPriceRow}>
+              <View>
+                <Text style={styles.ctaFeeLabel}>Biaya Admin Pemanggilan:</Text>
+                <Text style={styles.ctaFeeAmount}>Rp 10.000 (MontirPay)</Text>
+              </View>
+              <View style={{ alignItems: 'flex-end' }}>
+                <Text style={styles.ctaFeeLabel}>Estimasi Jasa Montir:</Text>
+                <Text style={styles.ctaMechAmount}>~{formatRupiah(selectedService.price)}</Text>
               </View>
             </View>
-            <View style={{ flex: 1, marginLeft: 12 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                <Text style={styles.profileName}>{activeOrder.mechanic?.name || 'Pak Agus Santoso'}</Text>
-                <View style={styles.verifBadge}>
-                  <Text style={styles.verifText}>VERIFIED</Text>
-                </View>
-              </View>
-              <Text style={styles.profileMeta}>⭐ {activeOrder.mechanic?.rating || '4.9'} • 340+ Servis Sukses</Text>
-              <Text style={styles.profileVehicle}>🛵 {activeOrder.mechanic?.vehicle || 'Honda Vario'}</Text>
-            </View>
-            <View style={{ alignItems: 'flex-end' }}>
-              <Text style={styles.profileDistLabel}>Jarak</Text>
-              <Text style={styles.profileDistVal}>{isArrived || isRepairing ? '0 m' : '1.8 km'}</Text>
-            </View>
-          </View>
 
-          {/* Action Buttons: Chat & Phone */}
-          <View style={styles.trackActions}>
-            <TouchableOpacity style={styles.trackChatBtn} onPress={() => setChatVisible(true)}>
-              <Text style={styles.trackChatText}>💬 Chat Montir ({chatMessages.length})</Text>
-            </TouchableOpacity>
             <TouchableOpacity
-              style={styles.trackCallBtn}
-              onPress={() =>
-                Alert.alert(
-                  'Telepon VoIP',
-                  `Menghubungi ${activeOrder.mechanic?.name} (${activeOrder.mechanic?.phone})...`
-                )
-              }
+              activeOpacity={0.88}
+              style={styles.gojekButton}
+              onPress={handlePayAndCall}
             >
-              <Text style={styles.trackCallText}>📞 Telepon Montir</Text>
+              <LinearGradient
+                colors={['#DC2626', '#E11D48']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.gojekButtonGradient}
+              >
+                <Ionicons name="radio-outline" size={20} color="#FFFFFF" />
+                <Text style={styles.gojekButtonText}>PANGGIL MONTIR SEKARANG</Text>
+              </LinearGradient>
             </TouchableOpacity>
           </View>
-
-          {/* Stepper Status */}
-          <View style={styles.stepperBox}>
-            <Text style={styles.stepperHeader}>STATUS PENANGANAN DARURAT</Text>
-            <Text style={styles.stepDone}>✅ Pesanan diterima oleh montir</Text>
-            <Text style={isArrived || isRepairing ? styles.stepDone : styles.stepCurrent}>
-              {isArrived || isRepairing
-                ? '✅ Montir telah tiba di lokasi'
-                : '🏍️ Montir sedang menuju ke lokasi Anda'}
-            </Text>
-            <Text style={isRepairing ? styles.stepCurrent : styles.stepPending}>
-              {isRepairing
-                ? '⚙️ Sedang melakukan penanganan ' + activeOrder.service?.title
-                : '⚪ Pemeriksaan kondisi fisik mobil'}
-            </Text>
-          </View>
-
-          {/* Shortcut to pay if testing */}
-          <TouchableOpacity
-            style={styles.payShortcutBtn}
-            onPress={() => setPaymentVisible(true)}
-          >
-            <Text style={styles.payShortcutText}>💳 Bayar Sekarang ({formatRupiah(activeOrder.price)})</Text>
-          </TouchableOpacity>
         </View>
 
-        {/* Payment Modal */}
-        <PaymentModal visible={paymentVisible} onClose={() => setPaymentVisible(false)} />
-
-        {/* Chat Modal */}
-        <Modal visible={chatVisible} animationType="slide" transparent>
-          <View style={styles.modalOverlay}>
-            <View style={styles.chatModalBox}>
-              <View style={styles.chatHeader}>
-                <View>
-                  <Text style={styles.chatTitle}>{activeOrder.mechanic?.name || 'Montir'}</Text>
-                  <Text style={styles.chatSub}>Koneksi Langsung Terenkripsi</Text>
+        {/* Modal Top Up MontirPay */}
+        <Modal visible={topUpModalVisible} transparent animationType="slide">
+          <View style={styles.modalBackdrop}>
+            <View style={styles.modalSheet}>
+              <View style={styles.modalHeader}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Ionicons name="wallet" size={22} color="#DC2626" />
+                  <Text style={styles.modalTitle}>Top Up Saldo MontirPay</Text>
                 </View>
-                <TouchableOpacity onPress={() => setChatVisible(false)}>
-                  <Text style={{ fontSize: 18, color: '#94a3b8' }}>✕</Text>
+                <TouchableOpacity onPress={() => setTopUpModalVisible(false)}>
+                  <Ionicons name="close" size={24} color="#64748B" />
                 </TouchableOpacity>
               </View>
-              <ScrollView style={styles.chatMessagesList}>
-                {chatMessages.map((m) => (
-                  <View
-                    key={m.id}
-                    style={[
-                      styles.chatBubble,
-                      m.sender === 'user' ? styles.userBubble : styles.mechBubble,
-                    ]}
+
+              <Text style={styles.modalSub}>
+                Saldo saat ini: <Text style={{ fontWeight: 'bold', color: '#0F172A' }}>{formatRupiah(driverWallet)}</Text>
+              </Text>
+
+              <Text style={styles.topUpChoiceLabel}>PILIH NOMINAL TOP UP INSTAN:</Text>
+              <View style={styles.topUpGrid}>
+                {[20000, 50000, 100000].map((amt) => (
+                  <TouchableOpacity
+                    key={amt}
+                    style={styles.topUpOption}
+                    onPress={() => {
+                      topUpDriverWallet(amt);
+                      Alert.alert('Top Up Berhasil', `Saldo MontirPay bertambah ${formatRupiah(amt)}!`);
+                      setTopUpModalVisible(false);
+                    }}
                   >
-                    <Text style={m.sender === 'user' ? styles.userText : styles.mechText}>
-                      {m.text}
-                    </Text>
-                  </View>
+                    <Text style={styles.topUpOptionText}>{formatRupiah(amt)}</Text>
+                    <Text style={styles.topUpOptionSub}>Instan QRIS</Text>
+                  </TouchableOpacity>
                 ))}
-              </ScrollView>
-              <View style={styles.chatInputRow}>
-                <TextInput
-                  style={styles.chatInput}
-                  placeholder="Ketik pesan patokan lokasi..."
-                  placeholderTextColor="#64748b"
-                  value={chatInput}
-                  onChangeText={setChatInput}
-                  onSubmitEditing={handleSendMessage}
-                />
-                <TouchableOpacity style={styles.chatSendBtn} onPress={handleSendMessage}>
-                  <Text style={{ color: '#fff', fontWeight: 'bold' }}>Kirim</Text>
-                </TouchableOpacity>
+              </View>
+
+              <View style={styles.qrisSimCard}>
+                <Ionicons name="qr-code" size={28} color="#475569" />
+                <Text style={styles.qrisSimText}>Mendukung QRIS Semua Bank & E-Wallet</Text>
               </View>
             </View>
           </View>
@@ -484,888 +342,1225 @@ export default function DriverView() {
     );
   }
 
-  // ================= SCENARIO 4: COMPLETED / PAID =================
-  if (activeOrder.status === 'paid' || activeOrder.status === 'completed') {
+  // ================= SCENARIO 2: SEARCHING ON REAL MAPS WITH RADAR =================
+  if (activeOrder.status === 'searching') {
     return (
-      <ScrollView style={styles.container} contentContainerStyle={{ padding: 20 }}>
-        <View style={styles.paidIconBox}>
-          <Text style={{ fontSize: 36 }}>🎉</Text>
-        </View>
-        <Text style={styles.paidTitle}>Mobil Berhasil Diperbaiki!</Text>
-        <Text style={styles.paidSub}>
-          Terima kasih telah menggunakan layanan Montir Siaga 24 Jam.
-        </Text>
+      <View style={styles.container}>
+        {/* Full Interactive Map with Pulsing Radar on Streets */}
+        <View style={{ flex: 1, width: '100%', position: 'relative' }}>
+          <GojekMapView
+            userCoords={activeOrder.userCoords || location || { latitude: -6.2255, longitude: 106.8120 }}
+            mechanics={mechanics}
+            orderStatus="searching"
+            showRadar={true}
+            height="100%"
+          />
 
-        <View style={styles.receiptCard}>
-          <Text style={styles.receiptHeader}>BUKTI TRANSAKSI #{activeOrder.id}</Text>
-          <View style={styles.receiptRow}>
-            <Text style={styles.receiptLabel}>Layanan:</Text>
-            <Text style={styles.receiptVal}>{activeOrder.service?.title}</Text>
+          {/* Floating Top Search Status Bar */}
+          <View style={styles.searchingTopPill}>
+            <View style={styles.searchSpinnerDot} />
+            <Text style={styles.searchingTopText}>Mencari Montir Terdekat...</Text>
           </View>
-          <View style={styles.receiptRow}>
-            <Text style={styles.receiptLabel}>Montir:</Text>
-            <Text style={styles.receiptVal}>{activeOrder.mechanic?.name || 'Pak Agus'}</Text>
-          </View>
-          <View style={styles.receiptRow}>
-            <Text style={styles.receiptLabel}>Metode Bayar:</Text>
-            <Text style={[styles.receiptVal, { color: '#38bdf8', textTransform: 'uppercase' }]}>
-              {activeOrder.paymentMethod || 'QRIS'}
+        </View>
+
+        {/* Bottom Searching Sheet */}
+        <View style={styles.searchingBottomSheet}>
+          <View style={styles.dragHandle} />
+
+          <View style={styles.searchingContent}>
+            <View style={styles.searchingRadarIconBox}>
+              <Animated.View
+                style={[
+                  styles.radarPulseRing,
+                  {
+                    transform: [{ scale: pulse1 }],
+                    opacity: pulse1.interpolate({ inputRange: [0.5, 2.4], outputRange: [0.8, 0] }),
+                  },
+                ]}
+              />
+              <Animated.View
+                style={[
+                  styles.radarPulseRing,
+                  {
+                    transform: [{ scale: pulse2 }],
+                    opacity: pulse2.interpolate({ inputRange: [0.5, 2.4], outputRange: [0.8, 0] }),
+                  },
+                ]}
+              />
+              <Ionicons name="radio" size={32} color="#DC2626" />
+            </View>
+
+            <Text style={styles.searchingTitle}>Menghubungkan ke Montir Siaga</Text>
+            <Text style={styles.searchingDesc}>
+              Memindai montir terdekat di radius 3 km dari lokasi mobil Anda ({address}).
             </Text>
-          </View>
-          <View style={styles.receiptDivider} />
-          <View style={styles.receiptRow}>
-            <Text style={styles.totalReceiptLabel}>Total Biaya:</Text>
-            <Text style={styles.totalReceiptVal}>{formatRupiah(activeOrder.price)}</Text>
+
+            <View style={styles.orderSummaryCard}>
+              <View style={styles.orderSummaryRow}>
+                <Text style={styles.orderSummaryLabel}>Layanan:</Text>
+                <Text style={styles.orderSummaryVal}>{activeOrder.service?.title}</Text>
+              </View>
+              <View style={styles.orderSummaryRow}>
+                <Text style={styles.orderSummaryLabel}>Biaya Admin Terbayar:</Text>
+                <Text style={styles.orderSummaryValGreen}>Rp 10.000 (Lunas)</Text>
+              </View>
+              <View style={styles.orderSummaryRow}>
+                <Text style={styles.orderSummaryLabel}>Estimasi Jasa Montir:</Text>
+                <Text style={styles.orderSummaryVal}>~{formatRupiah(activeOrder.service?.price)} (QRIS)</Text>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={styles.cancelSearchBtn}
+              onPress={() => {
+                Alert.alert('Batalkan Pencarian', 'Batalkan pemanggilan montir?', [
+                  { text: 'Tidak', style: 'cancel' },
+                  { text: 'Batalkan', style: 'destructive', onPress: cancelOrder },
+                ]);
+              }}
+            >
+              <Text style={styles.cancelSearchBtnText}>Batalkan Pencarian</Text>
+            </TouchableOpacity>
           </View>
         </View>
-
-        {/* Rating card */}
-        <View style={styles.reviewCard}>
-          <Text style={styles.reviewPrompt}>Beri Rating Pelayanan Montir:</Text>
-          <Text style={{ fontSize: 26, marginVertical: 8 }}>⭐⭐⭐⭐⭐</Text>
-          <Text style={styles.reviewSub}>Pelayanan ramah, cepat tiba, dan profesional.</Text>
-        </View>
-
-        <TouchableOpacity style={styles.finishResetBtn} onPress={resetOrder}>
-          <Text style={styles.finishResetText}>Kembali ke Beranda Panggilan</Text>
-        </TouchableOpacity>
-      </ScrollView>
+      </View>
     );
   }
 
-  return null;
+  // ================= SCENARIO 3: MECHANIC ASSIGNED & TRACKING ON MAP =================
+  const mech = activeOrder.mechanic || mechanics[0];
+  const isBilled = !!activeOrder.mechanicBillAmount && activeOrder.mechanicBillAmount > 0;
+  const isPaid = activeOrder.status === 'completed';
+
+  return (
+    <View style={styles.container}>
+      {/* Real Map Showing Route Polyline & Moving Mechanic */}
+      <View style={{ height: screenHeight * 0.48, width: '100%', position: 'relative' }}>
+        <GojekMapView
+          userCoords={activeOrder.userCoords || location || { latitude: -6.2255, longitude: 106.8120 }}
+          mechanics={[mech]}
+          assignedMechanic={mech}
+          orderStatus={activeOrder.status}
+          height="100%"
+        />
+
+        {/* Floating ETA Pill */}
+        <View style={styles.etaFloatingPill}>
+          <Ionicons name="time" size={16} color="#DC2626" />
+          <Text style={styles.etaFloatingText}>
+            {activeOrder.status === 'arrived'
+              ? 'Montir Telah Tiba di Lokasi!'
+              : activeOrder.status === 'repairing'
+              ? 'Sedang Dalam Proses Perbaikan'
+              : 'Montir Menuju Lokasi Anda • ~6 mnt'}
+          </Text>
+        </View>
+      </View>
+
+      {/* Tracking Bottom Sheet */}
+      <View style={[styles.bottomSheet, { flex: 1 }]}>
+        <View style={styles.dragHandle} />
+
+        <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1, paddingHorizontal: 16 }}>
+          {/* Mechanic Profile Card */}
+          <View style={styles.mechanicCard}>
+            <View style={styles.mechAvatar}>
+              <Ionicons name="person" size={24} color="#DC2626" />
+            </View>
+            <View style={{ flex: 1, marginLeft: 12 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text style={styles.mechName}>{mech.name}</Text>
+                <View style={styles.officialBadge}>
+                  <Text style={styles.officialBadgeText}>MITRA RESMI</Text>
+                </View>
+              </View>
+              <Text style={styles.mechVehicle}>{mech.vehicle || 'Honda Vario 160 (B 4921 TZX)'}</Text>
+              <Text style={styles.mechRating}>⭐ {mech.rating} • 342 Servis Selesai</Text>
+            </View>
+
+            {/* Quick Call & Chat Buttons */}
+            <View style={styles.actionButtonsCol}>
+              <TouchableOpacity
+                style={styles.circleBtnGreen}
+                onPress={() => Alert.alert('Hubungi Montir', `Menelepon ${mech.name} (${mech.phone || '0812-3456-7890'})...`)}
+              >
+                <Ionicons name="call" size={18} color="#FFFFFF" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.circleBtnBlue}
+                onPress={() => setChatVisible(true)}
+              >
+                <Ionicons name="chatbubble-ellipses" size={18} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Status Timeline Progress */}
+          <View style={styles.timelineCard}>
+            <Text style={styles.timelineTitle}>STATUS PENANGANAN MOBIL</Text>
+            <View style={styles.timelineRow}>
+              <View style={[styles.timelineStep, { backgroundColor: '#16A34A' }]}>
+                <Ionicons name="checkmark" size={12} color="#FFFFFF" />
+              </View>
+              <View style={[styles.timelineLine, { backgroundColor: '#16A34A' }]} />
+              <View
+                style={[
+                  styles.timelineStep,
+                  { backgroundColor: activeOrder.status === 'assigned' ? '#CBD5E1' : '#16A34A' },
+                ]}
+              >
+                <Ionicons
+                  name={activeOrder.status === 'assigned' ? 'ellipse' : 'checkmark'}
+                  size={12}
+                  color="#FFFFFF"
+                />
+              </View>
+              <View
+                style={[
+                  styles.timelineLine,
+                  { backgroundColor: ['repairing', 'billing', 'completed'].includes(activeOrder.status) ? '#16A34A' : '#CBD5E1' },
+                ]}
+              />
+              <View
+                style={[
+                  styles.timelineStep,
+                  { backgroundColor: isPaid ? '#16A34A' : '#CBD5E1' },
+                ]}
+              >
+                <Ionicons name={isPaid ? 'checkmark' : 'wallet'} size={12} color="#FFFFFF" />
+              </View>
+            </View>
+
+            <View style={styles.timelineLabels}>
+              <Text style={styles.timelineLabelActive}>Menuju Lokasi</Text>
+              <Text style={['arrived', 'repairing', 'billing', 'completed'].includes(activeOrder.status) ? styles.timelineLabelActive : styles.timelineLabelMuted}>
+                Di Tempat
+              </Text>
+              <Text style={isPaid ? styles.timelineLabelActive : styles.timelineLabelMuted}>
+                Selesai QRIS
+              </Text>
+            </View>
+          </View>
+
+          {/* QRIS BILL NOTIFICATION (JIKA SUDAH DITERBITKAN MONTIR) */}
+          {isBilled && !isPaid && (
+            <View style={styles.qrisAlertCard}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <View style={styles.qrisIconWrap}>
+                  <Ionicons name="qr-code" size={24} color="#DC2626" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.qrisAlertTitle}>Tagihan Jasa Perbaikan Montir</Text>
+                  <Text style={styles.qrisAlertAmount}>{formatRupiah(activeOrder.mechanicBillAmount)}</Text>
+                  <Text style={styles.qrisAlertNote}>
+                    {activeOrder.mechanicBillNote || 'Jasa perbaikan & penggantian suku cadang'}
+                  </Text>
+                </View>
+              </View>
+
+              <TouchableOpacity
+                style={styles.payQrisBtn}
+                activeOpacity={0.88}
+                onPress={() => setQrisModalVisible(true)}
+              >
+                <Ionicons name="scan" size={18} color="#FFFFFF" />
+                <Text style={styles.payQrisBtnText}>BAYAR SEKARANG VIA QRIS</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* COMPLETED STATUS */}
+          {isPaid && (
+            <View style={styles.completedCard}>
+              <Ionicons name="checkmark-circle" size={48} color="#16A34A" />
+              <Text style={styles.completedTitle}>Perbaikan Selesai & Lunas!</Text>
+              <Text style={styles.completedDesc}>
+                Terima kasih telah mempercayakan mobil Anda pada Montir Siaga. Seluruh tagihan jasa telah terbayar lunas via QRIS.
+              </Text>
+              <TouchableOpacity style={styles.resetBtn} onPress={resetOrder}>
+                <Text style={styles.resetBtnText}>Pesan Layanan Baru</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          <View style={{ height: 40 }} />
+        </ScrollView>
+      </View>
+
+      {/* MODAL QRIS PEMBAYARAN JASA */}
+      <Modal visible={qrisModalVisible} transparent animationType="slide">
+        <View style={styles.modalBackdrop}>
+          <View style={styles.qrisModalSheet}>
+            <View style={styles.modalHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Ionicons name="qr-code" size={24} color="#DC2626" />
+                <Text style={styles.modalTitle}>Pembayaran QRIS Montir</Text>
+              </View>
+              <TouchableOpacity onPress={() => setQrisModalVisible(false)}>
+                <Ionicons name="close" size={24} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.qrisTotalBox}>
+              <Text style={styles.qrisTotalLabel}>TOTAL TAGIHAN JASA</Text>
+              <Text style={styles.qrisTotalAmount}>{formatRupiah(activeOrder?.mechanicBillAmount)}</Text>
+              <Text style={styles.qrisDest}>Penerima: {mech.name} (Mitra Montir)</Text>
+            </View>
+
+            <View style={styles.qrisCodeContainer}>
+              <View style={styles.qrisLogoRow}>
+                <Text style={styles.qrisHeaderTitle}>QRIS</Text>
+                <Text style={styles.qrisHeaderSub}>PEMBAYARAN DIGITAL NASIONAL</Text>
+              </View>
+              {/* Simulated QR Code Graphic */}
+              <View style={styles.qrGraphic}>
+                <Ionicons name="qr-code-outline" size={160} color="#0F172A" />
+              </View>
+              <Text style={styles.qrisNmid}>NMID: ID1029384756201</Text>
+            </View>
+
+            <TouchableOpacity
+              style={styles.confirmQrisBtn}
+              activeOpacity={0.88}
+              onPress={handleConfirmPayQris}
+            >
+              <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+              <Text style={styles.confirmQrisBtnText}>KONFIRMASI BAYAR ({formatRupiah(activeOrder?.mechanicBillAmount)})</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* CHAT MODAL */}
+      <Modal visible={chatVisible} animationType="slide" transparent>
+        <View style={styles.modalBackdrop}>
+          <View style={[styles.modalSheet, { height: screenHeight * 0.75 }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Chat dengan {mech.name}</Text>
+              <TouchableOpacity onPress={() => setChatVisible(false)}>
+                <Ionicons name="close" size={24} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={{ flex: 1, padding: 12 }}>
+              {chatMessages.map((m, idx) => (
+                <View
+                  key={idx}
+                  style={[
+                    styles.chatBubble,
+                    m.sender === 'user' ? styles.chatBubbleUser : styles.chatBubbleMech,
+                  ]}
+                >
+                  <Text style={m.sender === 'user' ? styles.chatTextUser : styles.chatTextMech}>
+                    {m.text}
+                  </Text>
+                </View>
+              ))}
+            </ScrollView>
+            <View style={styles.chatInputRow}>
+              <TextInput
+                style={styles.chatInput}
+                placeholder="Tulis pesan..."
+                value={chatInput}
+                onChangeText={setChatInput}
+              />
+              <TouchableOpacity style={styles.chatSendBtn} onPress={handleSendMessage}>
+                <Ionicons name="send" size={18} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f172a',
+    backgroundColor: '#F8FAFC',
   },
-  scrollView: {
-    flex: 1,
-  },
-  header: {
-    backgroundColor: '#dc2626',
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 14,
-    borderBottomLeftRadius: 22,
-    borderBottomRightRadius: 22,
-  },
-  headerTop: {
+  floatingTopBar: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 48 : 36,
+    left: 16,
+    right: 16,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    zIndex: 200,
   },
-  brandGroup: {
+  montirPayPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-  },
-  brandIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.25)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  brandTitle: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '900',
-    letterSpacing: 0.5,
-  },
-  brandSubtitle: {
-    color: '#fecaca',
-    fontSize: 11,
-    fontWeight: '500',
-  },
-  driverTag: {
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  driverTagText: {
-    color: '#fef08a',
-    fontSize: 9,
-    fontWeight: '800',
-  },
-  gpsCard: {
-    marginTop: 10,
-    backgroundColor: 'rgba(0,0,0,0.35)',
-    borderRadius: 14,
-    padding: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  gpsIconBox: {
-    width: 26,
-    height: 26,
-    borderRadius: 8,
-    backgroundColor: '#ef4444',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 8,
-  },
-  gpsTitle: {
-    color: '#fde047',
-    fontSize: 9,
-    fontWeight: '800',
-  },
-  gpsActiveDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#4ade80',
-  },
-  gpsAddress: {
-    color: '#ffffff',
-    fontSize: 11,
-    fontWeight: '600',
-    marginTop: 2,
-  },
-  gpsRefreshBtn: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    borderRadius: 8,
-    marginLeft: 6,
-  },
-  gpsRefreshText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  vehicleCard: {
-    marginHorizontal: 16,
-    marginTop: 12,
-    backgroundColor: '#1e293b',
-    borderRadius: 14,
-    padding: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#334155',
-  },
-  vehicleLabel: {
-    color: '#94a3b8',
-    fontSize: 9,
-    fontWeight: '700',
-  },
-  vehicleValue: {
-    color: '#f8fafc',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  vehicleChange: {
-    color: '#f59e0b',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginHorizontal: 16,
-    marginTop: 14,
-    marginBottom: 8,
-  },
-  sectionTitle: {
-    color: '#e2e8f0',
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  sectionMeta: {
-    color: '#94a3b8',
-    fontSize: 10,
-  },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    paddingHorizontal: 12,
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 5,
     gap: 8,
   },
-  serviceCard: {
-    width: (width - 40) / 2,
-    backgroundColor: '#1e293b',
-    borderRadius: 16,
-    padding: 12,
-    borderWidth: 1.5,
-    borderColor: '#334155',
-  },
-  serviceSelected: {
-    borderColor: '#ef4444',
-    backgroundColor: 'rgba(239, 68, 68, 0.12)',
-  },
-  serviceTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  serviceIconBox: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    backgroundColor: '#334155',
+  montirPayIcon: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#DC2626',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  serviceIconSelected: {
-    backgroundColor: '#ef4444',
+  montirPayLabel: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#64748B',
+    textTransform: 'uppercase',
   },
-  badgePill: {
-    backgroundColor: 'rgba(16, 185, 129, 0.2)',
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-    borderRadius: 4,
+  montirPayValue: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: '#0F172A',
   },
-  badgePillText: {
-    color: '#34d399',
-    fontSize: 8,
+  topUpBadge: {
+    backgroundColor: '#FEE2E2',
+    paddingVertical: 3,
+    paddingHorizontal: 7,
+    borderRadius: 12,
+  },
+  topUpBadgeText: {
+    fontSize: 10,
     fontWeight: '800',
+    color: '#DC2626',
   },
-  serviceTitle: {
-    color: '#f8fafc',
-    fontSize: 11.5,
-    fontWeight: 'bold',
-    marginTop: 8,
+  sosBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1E293B',
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    gap: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
   },
-  serviceDesc: {
-    color: '#94a3b8',
-    fontSize: 9.5,
-    marginTop: 2,
-    lineHeight: 13,
+  greenLiveDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: '#22C55E',
   },
-  serviceBottom: {
+  sosBadgeText: {
+    fontSize: 10,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
+  },
+  floatingPickupCard: {
+    position: 'absolute',
+    bottom: 16,
+    left: 16,
+    right: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    padding: 10,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    elevation: 6,
+    gap: 10,
+    zIndex: 200,
+  },
+  pickupPinBox: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#FEE2E2',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pickupLabel: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#64748B',
+    textTransform: 'uppercase',
+  },
+  pickupAddress: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  refreshLocBtn: {
+    padding: 6,
+    borderRadius: 10,
+    backgroundColor: '#F1F5F9',
+  },
+  bottomSheet: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  dragHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#CBD5E1',
+    alignSelf: 'center',
+    marginVertical: 10,
+  },
+  sheetScroll: {
+    paddingHorizontal: 16,
+  },
+  vehiclePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    gap: 8,
+    marginBottom: 12,
+  },
+  vehicleName: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#334155',
+  },
+  changeLink: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#DC2626',
+  },
+  sectionTitleRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 8,
-    paddingTop: 6,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.06)',
+    marginBottom: 8,
   },
-  servicePrice: {
-    color: '#f59e0b',
-    fontSize: 12,
-    fontWeight: '800',
+  sectionTitleText: {
+    fontSize: 11,
+    fontWeight: '900',
+    color: '#0F172A',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
-  serviceEta: {
-    color: '#64748b',
-    fontSize: 9.5,
+  sectionSubtitleText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#64748B',
   },
-  noteBox: {
-    marginHorizontal: 16,
-    marginTop: 10,
-    backgroundColor: '#1e293b',
+  servicesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  serviceBox: {
+    width: (width - 48) / 3,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    borderRadius: 16,
+    padding: 10,
+    alignItems: 'center',
+  },
+  serviceBoxSelected: {
+    borderColor: '#DC2626',
+    backgroundColor: '#FFF1F2',
+    shadowColor: '#DC2626',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  serviceIconWrap: {
+    width: 38,
+    height: 38,
     borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    backgroundColor: '#FEE2E2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+  },
+  serviceIconSelected: {
+    backgroundColor: '#DC2626',
+  },
+  serviceBoxTitle: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#0F172A',
+    textAlign: 'center',
+    marginBottom: 2,
+  },
+  serviceBoxPrice: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#DC2626',
+  },
+  serviceBoxEta: {
+    fontSize: 9,
+    color: '#64748B',
+  },
+  noteInputWrap: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: '#E2E8F0',
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    marginTop: 12,
+    gap: 8,
   },
   noteInput: {
     flex: 1,
-    color: '#f8fafc',
-    fontSize: 11,
+    fontSize: 12,
+    color: '#0F172A',
+    paddingVertical: 9,
   },
-  safetyCard: {
-    marginHorizontal: 16,
-    marginTop: 10,
-    backgroundColor: 'rgba(120, 53, 15, 0.35)',
+  pricingNotice: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
     borderRadius: 12,
     padding: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(245, 158, 11, 0.3)',
+    gap: 8,
+    marginTop: 10,
   },
-  safetyText: {
-    color: '#fef3c7',
-    fontSize: 10,
+  pricingNoticeText: {
     flex: 1,
-    lineHeight: 14,
+    fontSize: 11,
+    color: '#166534',
+    lineHeight: 16,
   },
-  bottomBar: {
+  ctaBottomBar: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#0f172a',
-    padding: 14,
+    backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
-    borderTopColor: '#334155',
+    borderTopColor: '#F1F5F9',
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: Platform.OS === 'ios' ? 28 : 16,
   },
-  bottomRow: {
+  ctaPriceRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 8,
   },
-  bottomMeta: {
-    color: '#94a3b8',
+  ctaFeeLabel: {
     fontSize: 10,
+    color: '#64748B',
+    fontWeight: '600',
   },
-  bottomEta: {
-    color: '#10b981',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  bottomPrice: {
-    color: '#f59e0b',
-    fontSize: 14,
+  ctaFeeAmount: {
+    fontSize: 13,
     fontWeight: '900',
+    color: '#DC2626',
   },
-  ctaButton: {
-    backgroundColor: '#dc2626',
-    borderRadius: 14,
-    paddingVertical: 13,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#dc2626',
-    shadowOpacity: 0.4,
+  ctaMechAmount: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  gojekButton: {
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#DC2626',
     shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 6,
   },
-  ctaButtonText: {
-    color: '#ffffff',
-    fontSize: 13,
-    fontWeight: '900',
-    letterSpacing: 0.5,
-  },
-  // Searching Screen
-  searchingContainer: {
-    flex: 1,
-    backgroundColor: '#0b1120',
-    justifyContent: 'space-between',
-    padding: 20,
-  },
-  searchHeader: {
-    alignItems: 'center',
-    marginTop: 14,
-  },
-  siagaBadge: {
+  gojekButtonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 20,
-    gap: 6,
+    justifyContent: 'center',
+    paddingVertical: 14,
+    gap: 8,
   },
-  pulseDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#ef4444',
-  },
-  siagaBadgeText: {
-    color: '#ef4444',
-    fontSize: 10,
-    fontWeight: '800',
-  },
-  searchTitle: {
-    color: '#f8fafc',
-    fontSize: 18,
+  gojekButtonText: {
+    fontSize: 14,
     fontWeight: '900',
-    marginTop: 10,
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
   },
-  searchSub: {
-    color: '#94a3b8',
-    fontSize: 11,
-    textAlign: 'center',
-    marginTop: 4,
-  },
-  searchTip: {
-    color: '#cbd5e1',
-    fontSize: 11,
-    marginTop: 8,
-    backgroundColor: 'rgba(37, 99, 235, 0.15)',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(37, 99, 235, 0.3)',
-  },
-  radarCenter: {
-    height: 200,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  radarRing: {
+  // Searching State Styles
+  searchingTopPill: {
     position: 'absolute',
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    borderWidth: 2,
-    borderColor: '#ef4444',
-    backgroundColor: 'rgba(239, 68, 68, 0.08)',
+    top: Platform.OS === 'ios' ? 48 : 36,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1E293B',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    gap: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 6,
   },
-  radarCarBox: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    backgroundColor: '#ef4444',
+  searchSpinnerDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#F59E0B',
+  },
+  searchingTopText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  searchingBottomSheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingHorizontal: 20,
+    paddingBottom: 30,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  searchingContent: {
+    alignItems: 'center',
+    paddingTop: 10,
+  },
+  searchingRadarIconBox: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: '#FEE2E2',
     alignItems: 'center',
     justifyContent: 'center',
+    position: 'relative',
+    marginBottom: 14,
   },
-  searchDetailsCard: {
-    backgroundColor: '#1e293b',
+  radarPulseRing: {
+    position: 'absolute',
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    borderWidth: 2,
+    borderColor: '#DC2626',
+    backgroundColor: 'rgba(220, 38, 38, 0.15)',
+  },
+  searchingTitle: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#0F172A',
+    marginBottom: 6,
+  },
+  searchingDesc: {
+    fontSize: 12,
+    color: '#64748B',
+    textAlign: 'center',
+    marginBottom: 16,
+    lineHeight: 18,
+  },
+  orderSummaryCard: {
+    width: '100%',
+    backgroundColor: '#F8FAFC',
     borderRadius: 16,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: '#E2E8F0',
+    marginBottom: 16,
+    gap: 6,
   },
-  detailRow: {
+  orderSummaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 6,
-  },
-  detailLabel: {
-    color: '#94a3b8',
-    fontSize: 11,
-  },
-  detailVal: {
-    color: '#f8fafc',
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  cancelBtn: {
-    marginTop: 10,
-    backgroundColor: '#0f172a',
-    borderRadius: 10,
-    paddingVertical: 8,
     alignItems: 'center',
   },
-  cancelBtnText: {
-    color: '#94a3b8',
+  orderSummaryLabel: {
     fontSize: 11,
+    color: '#64748B',
     fontWeight: '600',
   },
-  // Tracking
-  mapBox: {
-    height: 220,
-    backgroundColor: '#1e293b',
-    position: 'relative',
-    overflow: 'hidden',
+  orderSummaryVal: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#0F172A',
   },
-  mapStreet: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 100,
-    height: 26,
-    backgroundColor: '#334155',
+  orderSummaryValGreen: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: '#16A34A',
   },
-  mapStatusOverlay: {
+  cancelSearchBtn: {
+    width: '100%',
+    paddingVertical: 12,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+  },
+  cancelSearchBtnText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#64748B',
+  },
+  // Tracking State Styles
+  etaFloatingPill: {
     position: 'absolute',
-    top: 12,
-    left: 12,
-    right: 12,
-    backgroundColor: 'rgba(15, 23, 42, 0.9)',
-    borderRadius: 20,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
+    top: Platform.OS === 'ios' ? 48 : 36,
+    alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    gap: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 6,
+  },
+  etaFloatingText: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: '#0F172A',
+  },
+  mechanicCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 18,
+    padding: 12,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: '#E2E8F0',
+    marginVertical: 10,
   },
-  greenDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#10b981',
+  mechAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#FEE2E2',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  mapStatusText: {
-    color: '#f8fafc',
-    fontSize: 11,
-    fontWeight: 'bold',
-    marginLeft: 6,
-    flex: 1,
+  mechName: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: '#0F172A',
   },
-  mapEtaPill: {
-    backgroundColor: '#dc2626',
-    paddingHorizontal: 6,
+  officialBadge: {
+    backgroundColor: '#DC2626',
     paddingVertical: 2,
+    paddingHorizontal: 6,
     borderRadius: 8,
   },
-  mapEtaText: {
-    color: '#fff',
-    fontSize: 10,
+  officialBadgeText: {
+    fontSize: 8,
     fontWeight: '900',
+    color: '#FFFFFF',
   },
-  movingMarker: {
-    position: 'absolute',
-    top: 85,
-    alignItems: 'center',
-  },
-  mechanicMarker: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#10b981',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#fff',
-  },
-  carMarker: {
-    position: 'absolute',
-    top: 85,
-    right: 20,
-    alignItems: 'center',
-  },
-  carMarkerBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#ef4444',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#fff',
-  },
-  markerText: {
-    color: '#f8fafc',
-    fontSize: 9,
-    fontWeight: 'bold',
+  mechVehicle: {
+    fontSize: 11,
+    color: '#475569',
     marginTop: 2,
   },
-  trackSheet: {
-    flex: 1,
-    backgroundColor: '#0f172a',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 14,
-    justifyContent: 'space-between',
+  mechRating: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#16A34A',
+    marginTop: 2,
   },
-  sheetPill: {
+  actionButtonsCol: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  circleBtnGreen: {
     width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#475569',
-    alignSelf: 'center',
-    marginBottom: 6,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#16A34A',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#16A34A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
   },
-  profileCard: {
+  circleBtnBlue: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#2563EB',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  timelineCard: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 12,
+  },
+  timelineTitle: {
+    fontSize: 10,
+    fontWeight: '900',
+    color: '#64748B',
+    letterSpacing: 0.5,
+    marginBottom: 10,
+  },
+  timelineRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1e293b',
-    borderRadius: 14,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: '#334155',
+    justifyContent: 'center',
+    marginVertical: 4,
   },
-  profileAvatar: {
+  timelineStep: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  timelineLine: {
+    flex: 1,
+    height: 3,
+  },
+  timelineLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 6,
+  },
+  timelineLabelActive: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#16A34A',
+  },
+  timelineLabelMuted: {
+    fontSize: 10,
+    color: '#94A3B8',
+  },
+  qrisAlertCard: {
+    backgroundColor: '#FFF1F2',
+    borderWidth: 1.5,
+    borderColor: '#FDA4AF',
+    borderRadius: 18,
+    padding: 14,
+    marginBottom: 12,
+  },
+  qrisIconWrap: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#334155',
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  profileCheck: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: '#10b981',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  profileName: {
-    color: '#f8fafc',
-    fontSize: 13,
-    fontWeight: 'bold',
-  },
-  verifBadge: {
-    backgroundColor: 'rgba(16, 185, 129, 0.2)',
-    paddingHorizontal: 4,
-    paddingVertical: 1,
-    borderRadius: 3,
-  },
-  verifText: {
-    color: '#34d399',
-    fontSize: 8,
-    fontWeight: '800',
-  },
-  profileMeta: {
-    color: '#f59e0b',
-    fontSize: 10.5,
-    marginTop: 2,
-  },
-  profileVehicle: {
-    color: '#94a3b8',
-    fontSize: 10.5,
-  },
-  profileDistLabel: {
-    color: '#94a3b8',
-    fontSize: 9,
-  },
-  profileDistVal: {
-    color: '#f8fafc',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  trackActions: {
-    flexDirection: 'row',
-    gap: 8,
-    marginVertical: 8,
-  },
-  trackChatBtn: {
-    flex: 1,
-    backgroundColor: '#1e293b',
     borderWidth: 1,
-    borderColor: '#f59e0b',
-    borderRadius: 10,
-    paddingVertical: 9,
-    alignItems: 'center',
+    borderColor: '#FECDD3',
   },
-  trackChatText: {
-    color: '#f59e0b',
-    fontSize: 11,
-    fontWeight: 'bold',
-  },
-  trackCallBtn: {
-    flex: 1,
-    backgroundColor: '#059669',
-    borderRadius: 10,
-    paddingVertical: 9,
-    alignItems: 'center',
-  },
-  trackCallText: {
-    color: '#fff',
-    fontSize: 11,
-    fontWeight: 'bold',
-  },
-  stepperBox: {
-    backgroundColor: '#1e293b',
-    borderRadius: 12,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: '#334155',
-  },
-  stepperHeader: {
-    color: '#94a3b8',
-    fontSize: 9,
-    fontWeight: '800',
-    marginBottom: 4,
-  },
-  stepDone: {
-    color: '#10b981',
-    fontSize: 10.5,
-    marginBottom: 3,
-  },
-  stepCurrent: {
-    color: '#f59e0b',
-    fontSize: 10.5,
-    fontWeight: 'bold',
-    marginBottom: 3,
-  },
-  stepPending: {
-    color: '#64748b',
-    fontSize: 10.5,
-  },
-  payShortcutBtn: {
-    backgroundColor: '#dc2626',
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  payShortcutText: {
-    color: '#fff',
+  qrisAlertTitle: {
     fontSize: 12,
-    fontWeight: '900',
+    fontWeight: '800',
+    color: '#9F1239',
   },
-  // Paid / Completed Screen
-  paidIconBox: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: 'rgba(16, 185, 129, 0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'center',
-    marginTop: 10,
-    marginBottom: 8,
-  },
-  paidTitle: {
-    color: '#f8fafc',
+  qrisAlertAmount: {
     fontSize: 18,
     fontWeight: '900',
-    textAlign: 'center',
+    color: '#BE123C',
+    marginTop: 2,
   },
-  paidSub: {
-    color: '#94a3b8',
+  qrisAlertNote: {
+    fontSize: 10,
+    color: '#881337',
+    marginTop: 2,
+  },
+  payQrisBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#DC2626',
+    borderRadius: 14,
+    paddingVertical: 12,
+    gap: 8,
+    marginTop: 12,
+    shadowColor: '#DC2626',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  payQrisBtnText: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: '#FFFFFF',
+  },
+  completedCard: {
+    alignItems: 'center',
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    borderRadius: 20,
+    padding: 20,
+    marginTop: 8,
+  },
+  completedTitle: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#15803D',
+    marginTop: 8,
+  },
+  completedDesc: {
     fontSize: 11,
+    color: '#166534',
     textAlign: 'center',
+    lineHeight: 16,
     marginTop: 4,
     marginBottom: 14,
   },
-  receiptCard: {
-    backgroundColor: '#1e293b',
-    borderRadius: 14,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#334155',
-  },
-  receiptHeader: {
-    color: '#94a3b8',
-    fontSize: 9,
-    fontWeight: '800',
-    marginBottom: 8,
-  },
-  receiptRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 6,
-  },
-  receiptLabel: {
-    color: '#94a3b8',
-    fontSize: 11,
-  },
-  receiptVal: {
-    color: '#f8fafc',
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  receiptDivider: {
-    height: 1,
-    backgroundColor: '#334155',
-    marginVertical: 6,
-  },
-  totalReceiptLabel: {
-    color: '#ffffff',
-    fontSize: 13,
-    fontWeight: 'bold',
-  },
-  totalReceiptVal: {
-    color: '#f59e0b',
-    fontSize: 15,
-    fontWeight: '900',
-  },
-  reviewCard: {
-    backgroundColor: '#1e293b',
-    borderRadius: 14,
-    padding: 14,
-    marginTop: 12,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#334155',
-  },
-  reviewPrompt: {
-    color: '#f8fafc',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  reviewSub: {
-    color: '#94a3b8',
-    fontSize: 10,
-    textAlign: 'center',
-  },
-  finishResetBtn: {
-    backgroundColor: '#dc2626',
+  resetBtn: {
+    backgroundColor: '#16A34A',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
     borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: 'center',
-    marginTop: 16,
-    marginBottom: 30,
   },
-  finishResetText: {
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: 'bold',
+  resetBtnText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#FFFFFF',
   },
-  // Modal Chat
-  modalOverlay: {
+  // Modal Styles
+  modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: 'rgba(15, 23, 42, 0.6)',
     justifyContent: 'flex-end',
   },
-  chatModalBox: {
-    height: '75%',
-    backgroundColor: '#0f172a',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 16,
+  modalSheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    padding: 20,
   },
-  chatHeader: {
+  qrisModalSheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    padding: 20,
+    alignItems: 'center',
+  },
+  modalHeader: {
+    width: '100%',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingBottom: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#334155',
+    marginBottom: 12,
   },
-  chatTitle: {
-    color: '#f8fafc',
-    fontSize: 14,
-    fontWeight: 'bold',
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#0F172A',
   },
-  chatSub: {
-    color: '#10b981',
-    fontSize: 10,
+  modalSub: {
+    fontSize: 13,
+    color: '#64748B',
+    marginBottom: 14,
   },
-  chatMessagesList: {
+  topUpChoiceLabel: {
+    fontSize: 11,
+    fontWeight: '900',
+    color: '#64748B',
+    marginBottom: 8,
+    textTransform: 'uppercase',
+  },
+  topUpGrid: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 16,
+  },
+  topUpOption: {
     flex: 1,
-    marginVertical: 10,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    borderRadius: 14,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  topUpOptionText: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: '#0F172A',
+  },
+  topUpOptionSub: {
+    fontSize: 9,
+    color: '#16A34A',
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  qrisSimCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F1F5F9',
+    borderRadius: 12,
+    padding: 10,
+    gap: 8,
+    justifyContent: 'center',
+  },
+  qrisSimText: {
+    fontSize: 11,
+    color: '#475569',
+    fontWeight: '600',
+  },
+  qrisTotalBox: {
+    width: '100%',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    padding: 14,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginBottom: 14,
+  },
+  qrisTotalLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#64748B',
+    letterSpacing: 0.5,
+  },
+  qrisTotalAmount: {
+    fontSize: 24,
+    fontWeight: '900',
+    color: '#DC2626',
+    marginVertical: 2,
+  },
+  qrisDest: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#334155',
+  },
+  qrisCodeContainer: {
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: '#CBD5E1',
+    borderRadius: 20,
+    padding: 14,
+    marginBottom: 16,
+  },
+  qrisLogoRow: {
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  qrisHeaderTitle: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#DC2626',
+    letterSpacing: 1,
+  },
+  qrisHeaderSub: {
+    fontSize: 8,
+    fontWeight: '800',
+    color: '#64748B',
+    letterSpacing: 0.5,
+  },
+  qrGraphic: {
+    padding: 4,
+    backgroundColor: '#FFFFFF',
+  },
+  qrisNmid: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#64748B',
+    marginTop: 4,
+  },
+  confirmQrisBtn: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#16A34A',
+    paddingVertical: 14,
+    borderRadius: 16,
+    gap: 8,
+    shadowColor: '#16A34A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  confirmQrisBtnText: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: '#FFFFFF',
   },
   chatBubble: {
     maxWidth: '80%',
     padding: 10,
-    borderRadius: 12,
+    borderRadius: 14,
     marginBottom: 8,
   },
-  userBubble: {
-    backgroundColor: '#dc2626',
+  chatBubbleUser: {
+    backgroundColor: '#DC2626',
     alignSelf: 'flex-end',
     borderBottomRightRadius: 2,
   },
-  mechBubble: {
-    backgroundColor: '#1e293b',
+  chatBubbleMech: {
+    backgroundColor: '#F1F5F9',
     alignSelf: 'flex-start',
     borderBottomLeftRadius: 2,
-    borderWidth: 1,
-    borderColor: '#334155',
   },
-  userText: {
-    color: '#ffffff',
-    fontSize: 11.5,
+  chatTextUser: {
+    color: '#FFFFFF',
+    fontSize: 12,
   },
-  mechText: {
-    color: '#e2e8f0',
-    fontSize: 11.5,
+  chatTextMech: {
+    color: '#0F172A',
+    fontSize: 12,
   },
   chatInputRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    paddingTop: 6,
+    marginTop: 8,
   },
   chatInput: {
     flex: 1,
-    backgroundColor: '#1e293b',
-    borderRadius: 10,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    color: '#fff',
-    fontSize: 11.5,
-    borderWidth: 1,
-    borderColor: '#334155',
+    fontSize: 12,
   },
   chatSendBtn: {
-    backgroundColor: '#dc2626',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    backgroundColor: '#DC2626',
+    padding: 10,
+    borderRadius: 12,
   },
 });

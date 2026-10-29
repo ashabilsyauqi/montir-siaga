@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { StyleSheet, Platform, View, ActivityIndicator } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -15,7 +15,7 @@ function MainApp() {
   if (!roleLoaded) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#ef4444" />
+        <ActivityIndicator size="large" color="#E11D48" />
       </View>
     );
   }
@@ -24,7 +24,7 @@ function MainApp() {
   if (!currentRole) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <StatusBar style="light" />
+        <StatusBar style="dark" backgroundColor="#FFFFFF" />
         <DeviceRoleSelector />
       </SafeAreaView>
     );
@@ -32,7 +32,7 @@ function MainApp() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar style="light" />
+      <StatusBar style="dark" backgroundColor="#FFFFFF" />
       {/* Top Status Bar with Live Server Sync & Quick Switch */}
       <RoleBar />
 
@@ -57,12 +57,12 @@ export default function App() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#070a12',
-    paddingTop: Platform.OS === 'android' ? 30 : 0,
+    backgroundColor: '#FFFFFF',
+    paddingTop: Platform.OS === 'android' ? 24 : 0,
   },
   loadingContainer: {
     flex: 1,
-    backgroundColor: '#070a12',
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
   },

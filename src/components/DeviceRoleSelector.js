@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import {
   StyleSheet,
   View,
@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
 } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useApp } from '../context/AppContext';
 
 export default function DeviceRoleSelector({ onClose }) {
@@ -21,7 +22,7 @@ export default function DeviceRoleSelector({ onClose }) {
       <ScrollView contentContainerStyle={styles.scroll}>
         {/* App Logo */}
         <View style={styles.logoBox}>
-          <Text style={{ fontSize: 36 }}>🚗⚡🔧</Text>
+          <Ionicons name="construct" size={36} color="#DC2626" />
         </View>
 
         <Text style={styles.title}>MONTIR SIAGA</Text>
@@ -31,27 +32,27 @@ export default function DeviceRoleSelector({ onClose }) {
 
         <View style={styles.serverPill}>
           <View style={styles.serverDot} />
-          <Text style={styles.serverText}>Tersambung ke Server Mac: {serverIP}:4000</Text>
+          <Text style={styles.serverText}>Tersambung ke Server: {serverIP}:4000</Text>
         </View>
 
         {/* Option 1: Driver */}
         <TouchableOpacity
           activeOpacity={0.85}
-          style={[styles.roleCard, { borderColor: '#ef4444' }]}
+          style={[styles.roleCard, { borderColor: '#DC2626' }]}
           onPress={() => handleSelect('driver')}
         >
-          <View style={[styles.iconBox, { backgroundColor: 'rgba(239, 68, 68, 0.2)' }]}>
-            <Text style={{ fontSize: 28 }}>🚗</Text>
+          <View style={[styles.iconBox, { backgroundColor: '#FEE2E2' }]}>
+            <Ionicons name="car-sport" size={26} color="#DC2626" />
           </View>
           <View style={{ flex: 1 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Text style={styles.roleName}>HP 1: Aplikasi Driver Mobil</Text>
-              <View style={[styles.badge, { backgroundColor: '#ef4444' }]}>
+              <Text style={styles.roleName}>Aplikasi Driver Mobil</Text>
+              <View style={[styles.badge, { backgroundColor: '#DC2626' }]}>
                 <Text style={styles.badgeText}>CUSTOMER</Text>
               </View>
             </View>
             <Text style={styles.roleDesc}>
-              Untuk pengemudi mobil mogok. Deteksi GPS nyata, pilih kendala (Aki/Ban/Overheat), dan panggil montir.
+              Pengemudi mobil mogok. Dilengkapi dompet MontirPay, deteksi GPS satelit nyata, dan radar pemindai montir terdekat.
             </Text>
           </View>
         </TouchableOpacity>
@@ -59,21 +60,21 @@ export default function DeviceRoleSelector({ onClose }) {
         {/* Option 2: Mechanic */}
         <TouchableOpacity
           activeOpacity={0.85}
-          style={[styles.roleCard, { borderColor: '#38bdf8' }]}
+          style={[styles.roleCard, { borderColor: '#10B981' }]}
           onPress={() => handleSelect('mechanic')}
         >
-          <View style={[styles.iconBox, { backgroundColor: 'rgba(56, 189, 248, 0.2)' }]}>
-            <Text style={{ fontSize: 28 }}>🔧</Text>
+          <View style={[styles.iconBox, { backgroundColor: '#DCFCE7' }]}>
+            <Ionicons name="construct" size={26} color="#10B981" />
           </View>
           <View style={{ flex: 1 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Text style={styles.roleName}>HP 2: Aplikasi Mitra Montir</Text>
-              <View style={[styles.badge, { backgroundColor: '#0284c7' }]}>
-                <Text style={styles.badgeText}>MITRA KERJA</Text>
+              <Text style={styles.roleName}>Aplikasi Mitra Mekanik</Text>
+              <View style={[styles.badge, { backgroundColor: '#10B981' }]}>
+                <Text style={styles.badgeText}>PARTNER</Text>
               </View>
             </View>
             <Text style={styles.roleDesc}>
-              Untuk mekanik di lapangan. Terima notifikasi order darurat masuk dari HP 1, navigasi rute, dan perbaikan.
+              Mitra montir panggilan. Radar siaga menerima panggilan darurat radius 5 km dan alur pengerjaan lapangan (Job Stepper).
             </Text>
           </View>
         </TouchableOpacity>
@@ -81,28 +82,30 @@ export default function DeviceRoleSelector({ onClose }) {
         {/* Option 3: Owner */}
         <TouchableOpacity
           activeOpacity={0.85}
-          style={[styles.roleCard, { borderColor: '#eab308' }]}
+          style={[styles.roleCard, { borderColor: '#6366F1' }]}
           onPress={() => handleSelect('owner')}
         >
-          <View style={[styles.iconBox, { backgroundColor: 'rgba(234, 179, 8, 0.2)' }]}>
-            <Text style={{ fontSize: 28 }}>👑</Text>
+          <View style={[styles.iconBox, { backgroundColor: '#EEF2FF' }]}>
+            <Ionicons name="shield-checkmark" size={26} color="#6366F1" />
           </View>
           <View style={{ flex: 1 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Text style={styles.roleName}>Aplikasi Owner / Admin</Text>
-              <View style={[styles.badge, { backgroundColor: '#ca8a04' }]}>
-                <Text style={styles.badgeText}>SUPER ADMIN</Text>
+              <Text style={styles.roleName}>Owner / Super Admin</Text>
+              <View style={[styles.badge, { backgroundColor: '#6366F1' }]}>
+                <Text style={styles.badgeText}>OWNER</Text>
               </View>
             </View>
             <Text style={styles.roleDesc}>
-              Dashboard pantau omzet, potongan komisi platform 15%, live order GPS, dan verifikasi mitra baru.
+              Pemilik platform. Memantau keuntungan bersih biaya admin Rp 10.000/order dari MontirPay dan live monitor pesanan.
             </Text>
           </View>
         </TouchableOpacity>
 
-        <Text style={styles.footerNote}>
-          💡 Catatan: Pilihan ini akan disimpan di memori HP Anda. Anda dapat mengganti peran kapan saja melalui tombol di pojok atas.
-        </Text>
+        {onClose && (
+          <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
+            <Text style={styles.closeBtnText}>Tutup Pengaturan Peran</Text>
+          </TouchableOpacity>
+        )}
       </ScrollView>
     </View>
   );
@@ -111,82 +114,82 @@ export default function DeviceRoleSelector({ onClose }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#090d16',
+    backgroundColor: '#FFFFFF',
   },
   scroll: {
-    padding: 20,
+    padding: 24,
     alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: '100%',
+    paddingTop: 40,
   },
   logoBox: {
-    width: 72,
-    height: 72,
-    borderRadius: 24,
-    backgroundColor: '#1e293b',
-    borderWidth: 2,
-    borderColor: '#334155',
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    backgroundColor: '#FEE2E2',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,
   },
   title: {
-    color: '#ffffff',
+    color: '#0F172A',
     fontSize: 22,
     fontWeight: '900',
-    letterSpacing: 1,
+    letterSpacing: 0.5,
   },
   subtitle: {
-    color: '#94a3b8',
+    color: '#64748B',
     fontSize: 13,
-    textAlign: 'center',
     marginTop: 4,
-    marginBottom: 12,
+    textAlign: 'center',
   },
   serverPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#131d2e',
+    backgroundColor: '#F1F5F9',
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 5,
     borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#1e293b',
-    marginBottom: 20,
     gap: 6,
+    marginTop: 14,
+    marginBottom: 24,
   },
   serverDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#10b981',
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#10B981',
   },
   serverText: {
-    color: '#38bdf8',
+    color: '#475569',
     fontSize: 11,
     fontWeight: '600',
     fontFamily: 'monospace',
   },
   roleCard: {
     width: '100%',
-    backgroundColor: '#131d2e',
-    borderRadius: 20,
-    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
     borderWidth: 1.5,
+    padding: 16,
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 14,
+    alignItems: 'flex-start',
     gap: 14,
+    marginBottom: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   iconBox: {
-    width: 52,
-    height: 52,
-    borderRadius: 16,
+    width: 48,
+    height: 48,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
   roleName: {
-    color: '#ffffff',
+    color: '#0F172A',
     fontSize: 14,
     fontWeight: '800',
   },
@@ -196,21 +199,26 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   badgeText: {
-    color: '#fff',
+    color: '#FFFFFF',
     fontSize: 8.5,
     fontWeight: '900',
   },
   roleDesc: {
-    color: '#94a3b8',
+    color: '#64748B',
     fontSize: 11,
     marginTop: 4,
-    lineHeight: 15,
-  },
-  footerNote: {
-    color: '#64748b',
-    fontSize: 11,
-    textAlign: 'center',
-    marginTop: 16,
     lineHeight: 16,
+  },
+  closeBtn: {
+    marginTop: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 10,
+  },
+  closeBtnText: {
+    color: '#64748B',
+    fontSize: 12,
+    fontWeight: '700',
   },
 });

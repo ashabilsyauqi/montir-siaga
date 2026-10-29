@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Modal } from 'react-native';
 import { useApp } from '../context/AppContext';
 import DeviceRoleSelector from './DeviceRoleSelector';
@@ -8,8 +8,8 @@ export default function RoleBar() {
   const [selectorVisible, setSelectorVisible] = useState(false);
 
   const roles = [
-    { id: 'driver', label: 'HP 1: Driver', icon: '🚗', badge: activeOrder && activeOrder.status !== 'idle' ? '1' : null },
-    { id: 'mechanic', label: 'HP 2: Montir', icon: '🔧', badge: activeOrder && activeOrder.status === 'searching' ? '🚨' : null },
+    { id: 'driver', label: 'Driver', icon: '🚗', badge: activeOrder && activeOrder.status !== 'idle' ? '1' : null },
+    { id: 'mechanic', label: 'Montir', icon: '🔧', badge: activeOrder && activeOrder.status === 'searching' ? '🚨' : null },
     { id: 'owner', label: 'Owner', icon: '👑', badge: null },
   ];
 
@@ -17,13 +17,13 @@ export default function RoleBar() {
     <View style={styles.container}>
       <View style={styles.topInfoRow}>
         <View style={styles.syncStatus}>
-          <View style={[styles.statusDot, { backgroundColor: isConnectedToServer ? '#10b981' : '#f59e0b' }]} />
+          <View style={[styles.statusDot, { backgroundColor: isConnectedToServer ? '#10B981' : '#F59E0B' }]} />
           <Text style={styles.syncText}>
-            {isConnectedToServer ? `Live Sync: ${serverIP}` : 'Menghubungkan ke Server...'}
+            {isConnectedToServer ? `Live Sync: ${serverIP}` : 'Menghubungkan Server...'}
           </Text>
         </View>
         <TouchableOpacity onPress={() => setSelectorVisible(true)} style={styles.changeRoleBtn}>
-          <Text style={styles.changeRoleText}>⚙️ Atur Peran HP</Text>
+          <Text style={styles.changeRoleText}>⚙️ Atur Peran</Text>
         </TouchableOpacity>
       </View>
 
@@ -40,7 +40,7 @@ export default function RoleBar() {
               <Text style={styles.tabIcon}>{r.icon}</Text>
               <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>{r.label}</Text>
               {r.badge && (
-                <View style={styles.badge}>
+                <View style={[styles.badge, isActive ? styles.badgeActive : styles.badgeInactive]}>
                   <Text style={styles.badgeText}>{r.badge}</Text>
                 </View>
               )}
@@ -58,52 +58,49 @@ export default function RoleBar() {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#070a12',
+    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#1e293b',
-    paddingHorizontal: 12,
-    paddingTop: 4,
+    borderBottomColor: '#E2E8F0',
+    paddingHorizontal: 16,
+    paddingTop: 6,
     paddingBottom: 8,
   },
   topInfoRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   syncStatus: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: 6,
   },
   statusDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
   syncText: {
-    color: '#94a3b8',
-    fontSize: 9.5,
+    color: '#64748B',
+    fontSize: 11,
     fontFamily: 'monospace',
     fontWeight: '600',
   },
   changeRoleBtn: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    backgroundColor: '#F1F5F9',
     borderRadius: 6,
   },
   changeRoleText: {
-    color: '#38bdf8',
-    fontSize: 9.5,
-    fontWeight: 'bold',
+    color: '#E11D48',
+    fontSize: 11,
+    fontWeight: '700',
   },
   roleTabs: {
     flexDirection: 'row',
-    backgroundColor: '#111827',
-    borderRadius: 12,
-    padding: 3,
-    gap: 4,
+    gap: 8,
   },
   tab: {
     flex: 1,
@@ -111,41 +108,47 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 7,
-    borderRadius: 9,
-    gap: 4,
-    position: 'relative',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    gap: 5,
   },
   tabActive: {
-    backgroundColor: '#2563eb',
-    shadowColor: '#2563eb',
-    shadowOpacity: 0.4,
-    shadowRadius: 6,
-    elevation: 3,
+    backgroundColor: '#E11D48',
+    borderColor: '#E11D48',
+    shadowColor: '#E11D48',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
   },
   tabIcon: {
     fontSize: 13,
   },
   tabLabel: {
-    color: '#94a3b8',
-    fontSize: 10.5,
+    color: '#475569',
+    fontSize: 12,
     fontWeight: '700',
   },
   tabLabelActive: {
-    color: '#ffffff',
-    fontWeight: '800',
+    color: '#FFFFFF',
   },
   badge: {
-    position: 'absolute',
-    top: -3,
-    right: 4,
-    backgroundColor: '#ef4444',
-    paddingHorizontal: 4,
+    paddingHorizontal: 5,
     paddingVertical: 1,
     borderRadius: 8,
+    marginLeft: 2,
+  },
+  badgeActive: {
+    backgroundColor: '#FFFFFF',
+  },
+  badgeInactive: {
+    backgroundColor: '#EF4444',
   },
   badgeText: {
-    color: '#fff',
-    fontSize: 8,
+    fontSize: 9,
     fontWeight: '900',
+    color: '#DC2626',
   },
 });
