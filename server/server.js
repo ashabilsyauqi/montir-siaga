@@ -412,6 +412,55 @@ app.post('/api/chat/send', (req, res) => {
 
 // Serve Smartphone PC Emulator (Driver, Montir, Dual HP)
 app.use('/mockup', express.static(path.join(__dirname, '../mockup_web')));
+app.get('/scan', (req, res) => {
+  res.send(`
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Scan QR Code Expo Go — Montir Siaga</title>
+  <style>
+    body { background: #0b0f19; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .card { background: #111827; border: 1.5px solid #1f2937; border-radius: 28px; padding: 32px; max-width: 440px; width: 100%; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.6); }
+    .badge { display: inline-block; background: rgba(0, 170, 19, 0.15); color: #00AA13; border: 1px solid rgba(0, 170, 19, 0.3); font-size: 11px; font-weight: 800; padding: 4px 12px; border-radius: 9999px; margin-bottom: 12px; }
+    h1 { font-size: 20px; font-weight: 900; margin-bottom: 6px; }
+    p { font-size: 13px; color: #94a3b8; line-height: 18px; margin-bottom: 20px; }
+    .qr-wrap { background: #ffffff; padding: 18px; border-radius: 20px; display: inline-block; margin-bottom: 20px; box-shadow: 0 8px 30px rgba(0,0,0,0.3); }
+    .qr-img { width: 280px; height: 280px; display: block; }
+    .url-box { background: #0f172a; border: 1px solid #334155; border-radius: 12px; padding: 10px 14px; font-family: monospace; font-size: 13px; color: #38bdf8; word-break: break-all; margin-bottom: 20px; }
+    .steps { text-align: left; background: #1f2937; border-radius: 14px; padding: 14px 16px; font-size: 12px; color: #cbd5e1; line-height: 20px; margin-bottom: 20px; }
+    .btn { display: block; background: #00AA13; color: white; padding: 12px; border-radius: 12px; text-decoration: none; font-weight: 800; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="badge">EXPO GO SCANNER</div>
+    <h1>Scan untuk Uji di HP Anda</h1>
+    <p>Arahkan kamera ponsel atau aplikasi Expo Go ke QR code di bawah ini.</p>
+    
+    <div class="qr-wrap">
+      <img src="/mockup/expo_qr_code.png" alt="Expo Go QR Code" class="qr-img" />
+    </div>
+
+    <div class="url-box">
+      exp://${LOCAL_IP}:8081
+    </div>
+
+    <div class="steps">
+      <strong>📱 Panduan Buka di HP:</strong><br/>
+      1. Pastikan HP dan PC terhubung ke Wi-Fi yang sama (<strong>192.168.1.xxx</strong>).<br/>
+      2. <strong>Android:</strong> Buka aplikasi <strong>Expo Go</strong>, lalu pilih <em>"Scan QR code"</em>.<br/>
+      3. <strong>iOS / iPhone:</strong> Buka aplikasi <strong>Kamera bawaan</strong> iPhone dan arahkan ke QR code.
+    </div>
+
+    <a href="/emulator" class="btn">Atau Buka Emulator PC ➔</a>
+  </div>
+</body>
+</html>
+  `);
+});
+
 app.get('/emulator', (req, res) => {
   res.sendFile(path.join(__dirname, '../mockup_web/emulator.html'));
 });
