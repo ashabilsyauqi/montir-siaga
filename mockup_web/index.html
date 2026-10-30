@@ -147,6 +147,7 @@
       display: flex;
       flex-direction: column;
       position: relative;
+      overflow: hidden;
     }
     .drag-handle { width: 36px; height: 4px; background: #e2e8f0; border-radius: 2px; margin: 8px auto 6px auto; }
 
@@ -256,6 +257,214 @@
     .order-btn-sub { font-size: 10px; color: #dcfce7; margin-top: 2px; }
     .arrow-circle { width: 32px; height: 32px; border-radius: 50%; background: #ffffff; color: #00AA13; display: flex; align-items: center; justify-content: center; font-weight: 900; }
 
+    /* ================= DRIVER RUNNING TASK (TAMPIL SAAT PROSES PERBAIKAN) ================= */
+    .driver-running-task {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px 18px 24px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .running-status-card {
+      background: #f8fafc;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 14px 16px;
+    }
+    .running-status-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+    .status-indicator-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #e6f7eb;
+      color: #00AA13;
+      border: 1px solid #86efac;
+      padding: 3px 8px;
+      border-radius: 9999px;
+      font-size: 10.5px;
+      font-weight: 800;
+    }
+    .pulsing-status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #00AA13;
+      animation: blink 1.2s infinite;
+    }
+    @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+
+    .running-eta-tag {
+      font-size: 11px;
+      font-weight: 800;
+      color: #64748b;
+      background: #e2e8f0;
+      padding: 2px 7px;
+      border-radius: 6px;
+    }
+    .running-status-headline {
+      font-size: 14px;
+      font-weight: 900;
+      color: #0f172a;
+      margin-bottom: 3px;
+    }
+    .running-status-desc {
+      font-size: 11.5px;
+      color: #475569;
+      line-height: 16px;
+      margin-bottom: 12px;
+    }
+
+    /* 4-Step Progress Indicator */
+    .step-progress-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 8px;
+      border-top: 1px dashed #cbd5e1;
+    }
+    .step-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+    }
+    .step-circle {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #e2e8f0;
+      color: #64748b;
+      font-size: 10px;
+      font-weight: 900;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+    .step-item.active .step-circle {
+      background: #00AA13;
+      color: #ffffff;
+      box-shadow: 0 2px 8px rgba(0,170,19,0.4);
+    }
+    .step-label {
+      font-size: 9.5px;
+      font-weight: 800;
+      color: #94a3b8;
+    }
+    .step-item.active .step-label {
+      color: #00AA13;
+    }
+    .step-line {
+      flex: 1;
+      height: 2px;
+      background: #e2e8f0;
+      margin: 0 4px 10px 4px;
+    }
+    .step-line.active {
+      background: #00AA13;
+    }
+
+    /* Mechanic Profile Card on Driver Screen */
+    .driver-mech-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    }
+    .mech-avatar-box {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      background: #fee2e2;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+    }
+    .mech-details-box {
+      flex: 1;
+      min-width: 0;
+    }
+    .mech-name-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .mech-name-row strong {
+      font-size: 13px;
+      font-weight: 800;
+      color: #0f172a;
+    }
+    .verified-tag {
+      background: #dcfce7;
+      color: #15803d;
+      font-size: 8.5px;
+      font-weight: 900;
+      padding: 1.5px 5px;
+      border-radius: 4px;
+    }
+    .mech-veh-sub {
+      font-size: 11px;
+      color: #475569;
+      margin-top: 1px;
+    }
+    .mech-rating-sub {
+      font-size: 10.5px;
+      color: #b45309;
+      font-weight: 700;
+    }
+    .mech-contact-actions {
+      display: flex;
+      gap: 6px;
+    }
+    .icon-contact-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .icon-contact-btn:hover {
+      background: #e2e8f0;
+    }
+
+    /* Task Info Card */
+    .task-info-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 11.5px;
+    }
+    .task-info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .task-info-label {
+      color: #64748b;
+    }
+
     /* Mechanic View */
     .mech-scroll { flex: 1; overflow-y: auto; padding: 12px 18px; display: flex; flex-direction: column; gap: 12px; }
     .revenue-card {
@@ -359,7 +568,7 @@
           <div class="brand-title">MONTIR SIAGA — SMARTPHONE PC EMULATOR</div>
           <span class="status-badge">DEWAKODING STACK</span>
         </div>
-        <div class="brand-sub">OpenStreetMap OSRM Routing • FCM Push Alerts • Rating & Komentar • Filament Admin</div>
+        <div class="brand-sub">OpenStreetMap OSRM Routing • FCM Push Alerts • Live Running Task • Rating & Komentar</div>
       </div>
     </div>
 
@@ -381,7 +590,7 @@
     
     <!-- ================= SMARTPHONE 1: DRIVER (PEMILIK MOBIL) ================= -->
     <div class="phone-wrapper" id="driverWrapper">
-      <div class="phone-label">🚘 POV PEMILIK MOBIL (INPUT KENDALA & PANGGIL MONTIR)</div>
+      <div class="phone-label">🚘 POV PEMILIK MOBIL (RUNNING TASK & STATUS DARURAT)</div>
       <div class="phone-bezel">
         <div class="dynamic-island"><div class="lens"></div></div>
 
@@ -396,7 +605,7 @@
 
         <!-- Phone Status Bar -->
         <div class="phone-status-bar">
-          <span>16:05</span>
+          <span>16:38</span>
           <span>5G &nbsp; 100% 🔋</span>
         </div>
 
@@ -425,11 +634,12 @@
           <div class="float-round-btn btn-right" onclick="recenterDriver()">🎯</div>
         </div>
 
-        <!-- Gojek Bottom Sheet: Driver Hanya Input Kerusakan & Tombol Panggil! -->
+        <!-- Gojek Bottom Sheet -->
         <div class="bottom-sheet">
           <div class="drag-handle"></div>
 
-          <div class="driver-form-container">
+          <!-- 1. DRIVER INITIAL FORM (PILIH KENDALA & PANGGIL) -->
+          <div class="driver-form-container" id="driverFormContainer">
             <!-- Vehicle Info -->
             <div class="vehicle-info-bar">
               <div class="vehicle-title">
@@ -470,8 +680,8 @@
             </div>
           </div>
 
-          <!-- Pinned Bottom Bar -->
-          <div class="pinned-bottom">
+          <!-- Pinned Bottom Bar (Tombol Panggil) -->
+          <div class="pinned-bottom" id="driverPinnedBottom">
             <div class="payment-row">
               <div class="wallet-box">
                 <div class="wallet-badge">💳</div>
@@ -489,6 +699,94 @@
               </div>
               <div class="arrow-circle">➔</div>
             </button>
+          </div>
+
+          <!-- 2. DRIVER RUNNING TASK (TETAP TAMPIL AKTIF SAAT PERBAIKAN BERLANGSUNG) -->
+          <div class="driver-running-task hidden" id="driverRunningTask">
+            <!-- Running Status Header -->
+            <div class="running-status-card">
+              <div class="running-status-top">
+                <div class="status-indicator-badge" id="driverStatusBadge">
+                  <span class="pulsing-status-dot"></span>
+                  <span id="driverStatusBadgeText">MONTIR SEDANG MELUNCUR</span>
+                </div>
+                <span class="running-eta-tag" id="driverEtaTag">~4 Menit Lagi</span>
+              </div>
+
+              <h3 class="running-status-headline" id="driverStatusHeadline">
+                Pak Agus Santoso Sedang Menuju ke Lokasi Anda
+              </h3>
+              <p class="running-status-desc" id="driverStatusDesc">
+                Montir telah menerima panggilan darurat dan sedang berkendara menuju mobil mogok Anda via rute OpenStreetMap.
+              </p>
+
+              <!-- 4-Step Progress Indicator -->
+              <div class="step-progress-row">
+                <div class="step-item active" id="step1">
+                  <div class="step-circle">1</div>
+                  <div class="step-label">Meluncur</div>
+                </div>
+                <div class="step-line" id="line1"></div>
+                <div class="step-item" id="step2">
+                  <div class="step-circle">2</div>
+                  <div class="step-label">Tiba</div>
+                </div>
+                <div class="step-line" id="line2"></div>
+                <div class="step-item" id="step3">
+                  <div class="step-circle">3</div>
+                  <div class="step-label">Perbaikan</div>
+                </div>
+                <div class="step-line" id="line3"></div>
+                <div class="step-item" id="step4">
+                  <div class="step-circle">4</div>
+                  <div class="step-label">Selesai</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Mechanic Profile Card on Driver -->
+            <div class="driver-mech-card">
+              <div class="mech-avatar-box">👨‍🔧</div>
+              <div class="mech-details-box">
+                <div class="mech-name-row">
+                  <strong>Pak Agus Santoso</strong>
+                  <span class="verified-tag">MITRA RESMI</span>
+                </div>
+                <div class="mech-veh-sub">🛵 Honda Vario 160 (B 4921 TZX)</div>
+                <div class="mech-rating-sub">⭐ 4.9 • 342 Servis Sukses</div>
+              </div>
+              <div class="mech-contact-actions">
+                <button class="icon-contact-btn" onclick="alert('Menghubungi telepon Pak Agus: 0812-3456-7890')">📞</button>
+                <button class="icon-contact-btn" onclick="alert('Pesan singkat terkirim ke montir: Kami sedang menunggu di dekat mobil Avanza!')">💬</button>
+              </div>
+            </div>
+
+            <!-- Car & Problem Detail -->
+            <div class="task-info-card">
+              <div class="task-info-row">
+                <span class="task-info-label">Mobil Anda:</span>
+                <strong id="taskVehName">Toyota Avanza 1.3 G (B 1234 SKA)</strong>
+              </div>
+              <div class="task-info-row">
+                <span class="task-info-label">Kendala Mogok:</span>
+                <span id="taskProblemNote" style="color:#b91c1c; font-weight:800;">Aki soak tidak bisa starter</span>
+              </div>
+              <div class="task-info-row">
+                <span class="task-info-label">Admin Owner:</span>
+                <span style="color:#00AA13; font-weight:900;">Rp 10.000 (Lunas dari MontirPay)</span>
+              </div>
+              <div class="task-info-row">
+                <span class="task-info-label">Biaya Servis:</span>
+                <span style="color:#0284c7; font-weight:800;">Bayar via QRIS di tempat setelah beres</span>
+              </div>
+            </div>
+
+            <!-- Action Bar when Billing QRIS is Ready -->
+            <div id="driverPayQrisBanner" class="hidden" style="margin-top:2px;">
+              <button onclick="document.getElementById('qrisModal').classList.remove('hidden')" style="width:100%; padding:13px; background:#00AA13; color:white; border:none; border-radius:14px; font-weight:900; font-size:13px; cursor:pointer; box-shadow:0 4px 14px rgba(0,170,19,0.35); display:flex; align-items:center; justify-content:center; gap:8px;">
+                <span>📱</span> Bayar Tagihan QRIS Montir Sekarang ➔
+              </button>
+            </div>
           </div>
 
           <!-- Searching Overlay -->
@@ -586,7 +884,7 @@
 
         <!-- Phone Status Bar -->
         <div class="phone-status-bar">
-          <span>16:05</span>
+          <span>16:38</span>
           <span>5G &nbsp; 100% 🔋</span>
         </div>
 
@@ -815,6 +1113,7 @@
       const v = prompt('Masukkan nama mobil dan plat:', 'Honda HR-V 1.5 RS (B 9999 VIP)');
       if (v && v.trim()) {
         document.getElementById('driverVehName').innerText = v.trim();
+        document.getElementById('taskVehName').innerText = v.trim();
       }
     }
 
@@ -842,6 +1141,9 @@
       document.getElementById('driverBalanceText').innerText = 'Rp ' + driverBalance.toLocaleString('id-ID');
 
       document.getElementById('summaryKendala').innerText = note;
+      document.getElementById('taskProblemNote').innerText = note;
+
+      // Show search overlay
       document.getElementById('searchOverlay').classList.remove('hidden');
 
       showToast('driver', '📡', 'Mencari Montir Terdekat', 'Memindai montir dalam radius 5 km via OpenStreetMap...');
@@ -875,6 +1177,26 @@
       showToast('driver', '↩️', 'Order Dibatalkan', 'Biaya admin Rp 10.000 telah dikembalikan ke MontirPay Anda.');
     }
 
+    // Helper: Update Driver Running Task UI Step & Status
+    function updateDriverRunningStatus(step, badgeText, badgeColor, headline, desc, eta) {
+      document.getElementById('driverStatusBadgeText').innerText = badgeText;
+      document.getElementById('driverStatusHeadline').innerText = headline;
+      document.getElementById('driverStatusDesc').innerText = desc;
+      if (eta) document.getElementById('driverEtaTag').innerText = eta;
+
+      // Update Step Indicators
+      for (let i = 1; i <= 4; i++) {
+        const stepEl = document.getElementById('step' + i);
+        if (i <= step) stepEl.classList.add('active');
+        else stepEl.classList.remove('active');
+      }
+      for (let i = 1; i <= 3; i++) {
+        const lineEl = document.getElementById('line' + i);
+        if (i < step) lineEl.classList.add('active');
+        else lineEl.classList.remove('active');
+      }
+    }
+
     // Montir functions
     function toggleStandby() {
       isStandbyOnline = !isStandbyOnline;
@@ -897,6 +1219,22 @@
       document.getElementById('incomingModal').classList.add('hidden');
       document.getElementById('searchOverlay').classList.add('hidden');
 
+      // 1. Hide Driver Initial Input Form & Pinned Bottom
+      document.getElementById('driverFormContainer').classList.add('hidden');
+      document.getElementById('driverPinnedBottom').classList.add('hidden');
+
+      // 2. SHOW DRIVER RUNNING TASK (TETAP AKTIF DAN TIDAK CLOSE!)
+      document.getElementById('driverRunningTask').classList.remove('hidden');
+      updateDriverRunningStatus(
+        1,
+        '🛵 MONTIR SEDANG MELUNCUR',
+        '#00AA13',
+        'Pak Agus Santoso Sedang Menuju ke Lokasi Anda',
+        'Montir telah menerima panggilan dan sedang meluncur mengendarai Honda Vario menuju mobil mogok Anda.',
+        '~4 Mnt Lagi'
+      );
+
+      // 3. Update Montir Screen
       document.getElementById('mechCustomerProblem').innerText = document.getElementById('damageNote').value || currentSymptom;
       document.getElementById('mechIdleBox').classList.add('hidden');
       document.getElementById('mechActiveBox').classList.remove('hidden');
@@ -919,6 +1257,16 @@
       document.getElementById('btnArrived').classList.add('hidden');
       document.getElementById('btnRepairing').classList.remove('hidden');
 
+      // Update Driver Running Task Status -> Step 2
+      updateDriverRunningStatus(
+        2,
+        '📍 MONTIR TELAH TIBA',
+        '#2563EB',
+        'Montir Telah Tiba di Depan Mobil Anda!',
+        'Pak Agus Santoso telah sampai di lokasi mobil mogok. Silakan temui montir di depan kendaraan Anda.',
+        'Sudah Sampai'
+      );
+
       showToast('mech', '📍', 'Tiba di Lokasi', 'Anda telah sampai di lokasi mobil mogok driver.');
       showToast('driver', '👨‍🔧', 'Montir Telah Tiba!', 'Pak Agus Santoso telah sampai di depan mobil Anda.');
 
@@ -932,6 +1280,16 @@
     function mechRepairing() {
       document.getElementById('btnRepairing').classList.add('hidden');
       document.getElementById('btnIssueBill').classList.remove('hidden');
+
+      // Update Driver Running Task Status -> Step 3 (PAS LAGI DI PERBAIKI TIDAK CLOSE!)
+      updateDriverRunningStatus(
+        3,
+        '🔧 SEDANG PROSES PERBAIKAN',
+        '#D97706',
+        'Mobil Anda Sedang Diperbaiki & Diperiksa',
+        'Montir sedang melakukan perbaikan darurat dan pengecekan komponen aki/mesin mobil Anda.',
+        'Proses Servis'
+      );
 
       showToast('mech', '🔧', 'Mulai Servis', 'Pengecekan dan perbaikan darurat sedang berlangsung.');
       showToast('driver', '🔧', 'Sedang Diperbaiki', 'Montir sedang memeriksa aki dan mesin mobil Anda.');
@@ -950,6 +1308,17 @@
     function submitBillToDriver() {
       const amt = Number(document.getElementById('inputBillVal').value || 85000);
       document.getElementById('billModalMech').classList.add('hidden');
+
+      // Update Driver Running Task Status -> Step 4 & Tampilkan Tombol Bayar QRIS
+      updateDriverRunningStatus(
+        4,
+        '💳 TAGIHAN QRIS TERSEDIA',
+        '#00AA13',
+        'Perbaikan Selesai! Tagihan QRIS Tersedia',
+        'Perbaikan mobil telah selesai dikerjakan. Silakan bayar tagihan jasa & part via QRIS montir.',
+        'Siap Bayar'
+      );
+      document.getElementById('driverPayQrisBanner').classList.remove('hidden');
 
       // Pop up QRIS on Driver phone
       document.getElementById('qrisTotalVal').innerText = 'Rp ' + amt.toLocaleString('id-ID');
@@ -975,7 +1344,7 @@
       showToast('driver', '🎉', 'Pembayaran QRIS Berhasil!', `Rp ${amt.toLocaleString('id-ID')} telah dibayarkan langsung ke montir.`);
       showToast('mech', '💰', 'Pembayaran Masuk!', `Rp ${amt.toLocaleString('id-ID')} berhasil ditambahkan ke saldo dompet Anda.`);
 
-      // Reset Mechanic State
+      // Reset Mechanic State to Idle
       document.getElementById('mechActiveBox').classList.add('hidden');
       document.getElementById('mechIdleBox').classList.remove('hidden');
       document.getElementById('btnArrived').classList.remove('hidden');
@@ -1019,7 +1388,13 @@
       const comment = document.getElementById('commentText').value || 'Pelayanan sangat memuaskan dan cepat!';
       document.getElementById('ratingModal').classList.add('hidden');
 
-      showToast('driver', '⭐', 'Terima Kasih Atas Ulasan Anda!', `Rating ⭐ ${selectedRating} telah dikirim.`);
+      // Close Running Task & Return Driver Screen to Home Initial Form
+      document.getElementById('driverRunningTask').classList.add('hidden');
+      document.getElementById('driverPayQrisBanner').classList.add('hidden');
+      document.getElementById('driverFormContainer').classList.remove('hidden');
+      document.getElementById('driverPinnedBottom').classList.remove('hidden');
+
+      showToast('driver', '⭐', 'Terima Kasih Atas Ulasan Anda!', `Rating ⭐ ${selectedRating} telah dikirim ke montir.`);
 
       fetch('/api/order/rate', {
         method: 'POST',
