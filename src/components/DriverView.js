@@ -33,6 +33,7 @@ export default function DriverView() {
     createOrder,
     cancelOrder,
     payQrisBill,
+    rateOrder,
     resetOrder,
     driverWallet,
     topUpDriverWallet,
@@ -51,6 +52,9 @@ export default function DriverView() {
   const [qrisModalVisible, setQrisModalVisible] = useState(false);
   const [editAddressModal, setEditAddressModal] = useState(false);
   const [customAddress, setCustomAddress] = useState('');
+  const [ratingModalVisible, setRatingModalVisible] = useState(false);
+  const [selectedRating, setSelectedRating] = useState(5);
+  const [commentText, setCommentText] = useState('');
 
   // Radar Pulse Animation for Searching State
   const pulse1 = useRef(new Animated.Value(0.5)).current;
@@ -135,10 +139,16 @@ export default function DriverView() {
   const handleConfirmPayQris = () => {
     payQrisBill();
     setQrisModalVisible(false);
-    Alert.alert(
-      'Pembayaran QRIS Berhasil! 🎉',
-      `Pembayaran sebesar ${formatRupiah(activeOrder?.mechanicBillAmount)} telah diterima langsung oleh ${activeOrder?.mechanic?.name || 'Montir'}.`
-    );
+    setTimeout(() => {
+      setRatingModalVisible(true);
+    }, 600);
+  };
+
+  const handleSubmitRating = async () => {
+    await rateOrder(selectedRating, commentText);
+    setRatingModalVisible(false);
+    Alert.alert('Terima Kasih! ⭐', 'Ulasan bintang dan komentar Anda telah terkirim.');
+    resetOrder();
   };
 
   const handleSendMessage = () => {
@@ -566,6 +576,66 @@ export default function DriverView() {
             <TouchableOpacity style={styles.confirmQrisBtn} onPress={handleConfirmPayQris}>
               <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
               <Text style={styles.confirmQrisBtnText}>Konfirmasi Telah Bayar QRIS</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+            {/* Dewakoding Modul 8: Modal Rating & Ulasan Bintang */}
+      <Modal visible={ratingModalVisible} transparent animationType="slide">
+        <View style={styles.modalBackdrop}>
+          <View style={styles.ratingModalCard}>
+            <View style={{ alignItems: 'center', marginBottom: 12 }}>
+              <View style={styles.starCircleIcon}>
+                <Ionicons name="star" size={30} color="#EAB308" />
+              </View>
+              <Text style={styles.ratingSheetTitle}>Beri Rating & Ulasan Montir</Text>
+              <Text style={styles.ratingSheetSub}>
+                Bagaimana kualitas perbaikan mobil Anda oleh {activeOrder?.mechanic?.name || 'Pak Agus Santoso'}?
+              </Text>
+            </View>
+
+            {/* 5 Stars */}
+            <View style={styles.starPickerRow}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <TouchableOpacity key={star} onPress={() => setSelectedRating(star)}>
+                  <Ionicons
+                    name={star <= selectedRating ? 'star' : 'star-outline'}
+                    size={36}
+                    color="#EAB308"
+                  />
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Text style={styles.starRatingBadge}>
+              {selectedRating === 5 ? 'Sangat Memuaskan (5/5)' : `Puas (${selectedRating}/5)`}
+            </Text>
+
+            {/* Quick Feedback Chips */}
+            <View style={styles.feedbackChipsRow}>
+              {['Pelayanan Cepat', 'Montir Sangat Ahli', 'Ramah & Sopan', 'Harga Pas'].map((chip) => (
+                <TouchableOpacity
+                  key={chip}
+                  style={styles.feedbackChipBtn}
+                  onPress={() => setCommentText((prev) => (prev ? prev + ', ' + chip : chip))}
+                >
+                  <Text style={styles.feedbackChipText}>+ {chip}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <TextInput
+              style={styles.commentInputBox}
+              multiline
+              numberOfLines={3}
+              placeholder="Tuliskan ulasan atau saran untuk montir..."
+              placeholderTextColor="#94A3B8"
+              value={commentText}
+              onChangeText={setCommentText}
+            />
+
+            <TouchableOpacity style={styles.submitRatingBtn} onPress={handleSubmitRating}>
+              <Text style={styles.submitRatingText}>Kirim Ulasan & Selesai ➔</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1108,6 +1178,35 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   confirmQrisBtnText: { color: '#FFFFFF', fontWeight: '900', fontSize: 14 },
+
+  // Dewakoding Modul 8 Rating Styles
+  ratingModalCard: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 22,
+    width: '100%',
+    alignItems: 'center',
+  },
+  starCircleIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: '#FEF3C7',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  ratingSheetTitle: { fontSize: 16, fontWeight: '900', color: '#0F172A' },
+  ratingSheetSub: { fontSize: 11.5, color: '#64748B', textAlign: 'center', marginTop: 3, paddingHorizontal: 12 },
+  starPickerRow: { flexDirection: 'row', gap: 10, marginVertical: 12 },
+  starRatingBadge: { fontSize: 11, fontWeight: '800', color: '#B45309', marginBottom: 10 },
+  feedbackChipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, justifyContent: 'center', marginBottom: 12 },
+  feedbackChipBtn: { backgroundColor: '#F1F5F9', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, borderWidth: 1, borderColor: '#CBD5E1' },
+  feedbackChipText: { fontSize: 10.5, fontWeight: '700', color: '#475569' },
+  commentInputBox: { width: '100%', height: 60, borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 12, padding: 10, fontSize: 12, textAlignVertical: 'top', marginBottom: 14 },
+  submitRatingBtn: { width: '100%', backgroundColor: '#00AA13', paddingVertical: 12, borderRadius: 14, alignItems: 'center' },
+  submitRatingText: { color: '#FFFFFF', fontWeight: '900', fontSize: 13 },
 
   // Chat Container
   chatContainer: { flex: 1, backgroundColor: '#F8FAFC' },

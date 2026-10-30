@@ -17,9 +17,9 @@ export const INITIAL_MECHANICS = [
     jobsCompleted: 342,
     verified: true,
     status: 'online',
-    specialty: 'Aki & Kelistrikan',
+    specialty: 'Aki & Kelistrikan Mobil',
     walletBalance: 485000,
-    coords: { latitude: -6.2255, longitude: 106.8120 },
+    coords: { latitude: -6.2215, longitude: 106.8165 },
   },
   {
     id: 'm2',
@@ -30,7 +30,7 @@ export const INITIAL_MECHANICS = [
     jobsCompleted: 198,
     verified: true,
     status: 'online',
-    specialty: 'Ban & Mesin Overheat',
+    specialty: 'Ban Bocor & Overheat Radiator',
     walletBalance: 320000,
     coords: { latitude: -6.2290, longitude: 106.8090 },
   },
@@ -104,7 +104,7 @@ export const INITIAL_ORDER_HISTORY = [
     id: 'MS-8919',
     date: 'Hari ini, 11:05',
     driver: 'Toyota Innova (B 8821 KLO)',
-    damage: 'Ban bocor kena paku',
+    damage: 'Ban bocor kena baut',
     mechanic: 'Bambang Irawan',
     adminFee: 10000,
     mechanicBill: 65000,
@@ -269,6 +269,7 @@ export function AppProvider({ children }) {
         mechanicBillNote: 'Jasa perbaikan darurat',
         qrisGenerated: false,
         qrisPaid: false,
+        ratingSubmitted: false,
         createdAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
       setActiveOrder(fallbackOrder);
@@ -383,6 +384,32 @@ export function AppProvider({ children }) {
     }
   };
 
+  // 4. Dewakoding Modul 8: Rate Order
+  const rateOrder = async (rating, comment) => {
+    try {
+      const res = await fetch(`${API_URL}/api/order/rate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderId: activeOrder?.id,
+          rating,
+          comment,
+          mechanicId: activeOrder?.mechanic?.id || 'm1',
+        }),
+      });
+      const data = await res.json();
+      if (activeOrder) {
+        setActiveOrder({ ...activeOrder, ratingSubmitted: true });
+      }
+      return data;
+    } catch (e) {
+      if (activeOrder) {
+        setActiveOrder({ ...activeOrder, ratingSubmitted: true });
+      }
+      return { success: true };
+    }
+  };
+
   const sweepPettyCash = async (pin) => {
     if (pin !== '1234') {
       return { success: false, error: 'PIN Keamanan Salah! Akses ditolak.' };
@@ -482,6 +509,7 @@ export function AppProvider({ children }) {
         updateOrderStatus,
         generateMechanicBill,
         payQrisBill,
+        rateOrder,
         sweepPettyCash,
         cancelOrder,
         resetOrder,

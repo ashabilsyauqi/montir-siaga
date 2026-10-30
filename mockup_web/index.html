@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Montir Siaga — Smartphone PC Emulator</title>
+  <title>Montir Siaga — Smartphone PC Emulator (Dewakoding Stack)</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
@@ -13,7 +13,7 @@
     /* Header */
     header { background-color: #111827; border-bottom: 1px solid #1f2937; padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
     .brand-box { display: flex; align-items: center; gap: 12px; }
-    .brand-icon { width: 40px; height: 40px; border-radius: 12px; background: #dc2626; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+    .brand-icon { width: 40px; height: 40px; border-radius: 12px; background: #dc2626; display: flex; align-items: center; justify-content: center; font-size: 20px; box-shadow: 0 4px 12px rgba(220,38,38,0.4); }
     .brand-title { font-size: 15px; font-weight: 800; color: #ffffff; letter-spacing: 0.5px; }
     .brand-sub { font-size: 11px; color: #94a3b8; }
     .status-badge { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 9999px; }
@@ -22,6 +22,20 @@
     .nav-btn { background: transparent; border: none; color: #94a3b8; font-size: 12px; font-weight: 700; padding: 6px 14px; border-radius: 10px; cursor: pointer; transition: all 0.2s; }
     .nav-btn.active { background: #dc2626; color: #ffffff; }
     .nav-btn:hover:not(.active) { color: #ffffff; }
+
+    .filament-link {
+      background: #1e293b;
+      color: #38bdf8;
+      border: 1px solid #334155;
+      padding: 6px 12px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 800;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
 
     /* Canvas */
     main { flex: 1; display: flex; align-items: center; justify-content: center; padding: 24px; gap: 40px; overflow: auto; background: radial-gradient(circle at 50% 20%, #1e293b 0%, #0b0f19 80%); }
@@ -45,6 +59,32 @@
     .dynamic-island { width: 105px; height: 25px; background: #000000; border-radius: 20px; position: absolute; top: 11px; left: 50%; transform: translateX(-50%); z-index: 1000; display: flex; align-items: center; justify-content: flex-end; padding-right: 12px; }
     .lens { width: 9px; height: 9px; border-radius: 50%; background: #111827; border: 1.5px solid #1f2937; }
 
+    /* Dewakoding Modul 9: FCM Push Notification Toast */
+    .fcm-toast {
+      position: absolute;
+      top: 48px;
+      left: 14px;
+      right: 14px;
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 16px;
+      padding: 10px 14px;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      z-index: 2000;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+      animation: slideDown 0.3s ease-out;
+      transition: all 0.3s;
+    }
+    @keyframes slideDown { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .fcm-icon { width: 32px; height: 32px; border-radius: 10px; background: #dc2626; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+    .fcm-content { flex: 1; min-width: 0; }
+    .fcm-title { font-size: 11.5px; font-weight: 800; color: #f87171; }
+    .fcm-body { font-size: 11px; color: #cbd5e1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
     /* Phone Status Bar */
     .phone-status-bar { height: 42px; padding: 12px 24px 0 24px; background: #ffffff; display: flex; align-items: center; justify-content: space-between; font-size: 11px; font-weight: 800; color: #0f172a; z-index: 500; }
 
@@ -59,141 +99,308 @@
       left: 14px;
       right: 14px;
       background: #ffffff;
-      border-radius: 18px;
-      padding: 10px 14px;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.12);
-      border: 1px solid #f1f5f9;
+      border-radius: 16px;
+      padding: 12px 14px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.15);
       display: flex;
       align-items: center;
       justify-content: space-between;
+      gap: 10px;
       z-index: 500;
+      border: 1px solid #f1f5f9;
     }
-    .address-left { flex: 1; padding-right: 8px; }
-    .address-row { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .dot-green { width: 10px; height: 10px; border-radius: 50%; background: #00AA13; flex-shrink: 0; }
-    .dot-orange { width: 10px; height: 10px; border-radius: 50%; background: #FA541C; flex-shrink: 0; }
-    .address-divider { height: 1px; background: #e2e8f0; margin: 4px 0 4px 18px; }
-    .edit-btn { border: 1.5px solid #00AA13; color: #00AA13; background: #ffffff; padding: 4px 14px; border-radius: 16px; font-size: 12px; font-weight: 800; cursor: pointer; }
+    .address-left { flex: 1; display: flex; flex-direction: column; gap: 4px; overflow: hidden; }
+    .address-row { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .dot-green { width: 8px; height: 8px; border-radius: 50%; background: #00AA13; flex-shrink: 0; }
+    .dot-orange { width: 8px; height: 8px; border-radius: 50%; background: #FA541C; flex-shrink: 0; }
+    .address-divider { height: 6px; border-left: 2px dashed #cbd5e1; margin-left: 3px; }
+    .edit-btn { background: #f1f5f9; color: #00AA13; font-weight: 800; font-size: 11px; padding: 4px 10px; border-radius: 9999px; border: none; cursor: pointer; }
 
-    /* Floating Buttons */
-    .float-round-btn { position: absolute; bottom: 16px; width: 38px; height: 38px; border-radius: 50%; background: #ffffff; border: 1px solid #f1f5f9; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 500; font-size: 15px; }
-    .btn-left { left: 16px; color: #1e293b; }
-    .btn-right { right: 16px; color: #00AA13; }
+    /* Floating Round Buttons */
+    .float-round-btn {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: #ffffff;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      cursor: pointer;
+      z-index: 500;
+      color: #0f172a;
+    }
+    .btn-left { top: 80px; left: 14px; }
+    .btn-right { top: 80px; right: 14px; color: #00AA13; }
 
-    /* Bottom Sheet */
-    .bottom-sheet { flex: 1; background: #ffffff; border-top-left-radius: 26px; border-top-right-radius: 26px; margin-top: -16px; box-shadow: 0 -4px 16px rgba(0,0,0,0.08); display: flex; flex-direction: column; position: relative; z-index: 600; overflow: hidden; }
-    .drag-handle { width: 36px; height: 4px; background: #cbd5e1; border-radius: 2px; margin: 8px auto 6px auto; }
+    /* Bottom Sheet Area */
+    .bottom-sheet {
+      flex: 1;
+      background: #ffffff;
+      border-top-left-radius: 26px;
+      border-top-right-radius: 26px;
+      box-shadow: 0 -8px 24px rgba(0,0,0,0.06);
+      margin-top: -16px;
+      z-index: 600;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    .drag-handle { width: 36px; height: 4px; background: #e2e8f0; border-radius: 2px; margin: 8px auto 6px auto; }
 
-    /* Driver Form: Simplified Damage Input & Call Button */
-    .driver-form-container { flex: 1; overflow-y: auto; padding: 0 16px 90px 16px; display: flex; flex-direction: column; gap: 10px; }
+    /* Driver Form Layout */
+    .driver-form-container { flex: 1; overflow-y: auto; padding: 8px 18px 80px 18px; display: flex; flex-direction: column; gap: 10px; }
 
-    /* Vehicle card */
-    .vehicle-info-bar { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 8px 12px; display: flex; align-items: center; justify-content: space-between; }
-    .vehicle-title { font-size: 12px; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 6px; }
-    .vehicle-plate { background: #0f172a; color: #ffffff; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-family: monospace; font-weight: 700; }
-    .change-veh-btn { color: #dc2626; font-size: 11px; font-weight: 800; cursor: pointer; border: none; background: transparent; }
+    /* Vehicle Info Bar */
+    .vehicle-info-bar {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .vehicle-title { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 800; color: #0f172a; }
+    .vehicle-plate { color: #64748b; font-size: 11px; font-weight: 700; background: #e2e8f0; padding: 2px 6px; border-radius: 6px; }
+    .change-veh-btn { color: #00AA13; font-size: 11px; font-weight: 800; background: none; border: none; cursor: pointer; }
 
-    /* Quick symptom chips */
-    .chips-label { font-size: 11px; font-weight: 800; color: #475569; text-transform: uppercase; margin-top: 2px; }
+    /* Damage Chips & Textarea */
+    .chips-label { font-size: 11px; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: 0.3px; }
     .chips-wrap { display: flex; flex-wrap: wrap; gap: 6px; }
-    .chip-btn { background: #f1f5f9; border: 1px solid #e2e8f0; color: #334155; font-size: 11px; font-weight: 700; padding: 6px 10px; border-radius: 10px; cursor: pointer; transition: all 0.2s; }
-    .chip-btn:hover { background: #fee2e2; border-color: #fca5a5; color: #dc2626; }
-    .chip-btn.active { background: #fef2f2; border-color: #dc2626; color: #dc2626; font-weight: 800; }
+    .chip-btn {
+      background: #f1f5f9;
+      border: 1px solid #e2e8f0;
+      padding: 6px 12px;
+      border-radius: 9999px;
+      font-size: 11.5px;
+      font-weight: 700;
+      color: #334155;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .chip-btn:hover { background: #e2e8f0; }
+    .chip-btn.active { background: #e6f7eb; color: #00AA13; border-color: #86efac; font-weight: 800; }
 
-    /* Damage Textarea */
-    .damage-input-box { background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; transition: border-color 0.2s; }
-    .damage-input-box:focus-within { border-color: #00AA13; box-shadow: 0 0 0 3px rgba(0, 170, 19, 0.15); }
-    .damage-label { font-size: 11px; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 5px; }
-    .damage-textarea { border: none; outline: none; resize: none; font-size: 13px; color: #0f172a; height: 60px; font-weight: 500; }
-    .damage-textarea::placeholder { color: #94a3b8; font-weight: 400; }
+    .damage-input-box {
+      background: #ffffff;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 14px;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .damage-label { font-size: 11px; font-weight: 800; color: #00AA13; display: flex; align-items: center; gap: 6px; }
+    .damage-textarea {
+      width: 100%;
+      height: 54px;
+      border: none;
+      outline: none;
+      resize: none;
+      font-size: 12px;
+      color: #0f172a;
+      line-height: 16px;
+    }
 
-    /* Transparency banner */
-    .fee-notice-banner { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 8px 12px; display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: #166534; }
+    .fee-notice-banner {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 12px;
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      color: #166534;
+      line-height: 15px;
+    }
 
-    /* Pinned Bottom */
-    .pinned-bottom { position: absolute; bottom: 0; left: 0; right: 0; background: #ffffff; border-top: 1px solid #f1f5f9; padding: 8px 16px 14px 16px; box-shadow: 0 -4px 12px rgba(0,0,0,0.06); }
-    .payment-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-    .wallet-box { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 800; color: #0f172a; }
-    .wallet-badge { background: #0284c7; color: white; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; }
-    .wallet-balance { color: #0284c7; font-weight: 800; }
-    .topup-link { background: #e0f2fe; color: #0284c7; padding: 2px 8px; border-radius: 8px; font-size: 10px; font-weight: 800; cursor: pointer; border: none; }
+    /* Pinned Bottom Bar */
+    .pinned-bottom {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #ffffff;
+      border-top: 1px solid #f1f5f9;
+      padding: 10px 18px 16px 18px;
+      box-shadow: 0 -4px 16px rgba(0,0,0,0.06);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .payment-row { display: flex; align-items: center; justify-content: space-between; }
+    .wallet-box { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 800; color: #0f172a; }
+    .wallet-badge { width: 22px; height: 22px; border-radius: 6px; background: #00AA13; color: white; display: flex; align-items: center; justify-content: center; font-size: 11px; }
+    .wallet-balance { font-weight: 900; color: #00AA13; }
+    .topup-link { color: #00AA13; font-size: 11px; font-weight: 800; background: none; border: none; cursor: pointer; text-decoration: underline; }
 
-    .order-button { width: 100%; background: #00AA13; border: none; border-radius: 9999px; padding: 12px 18px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; box-shadow: 0 4px 14px rgba(0, 170, 19, 0.4); transition: background 0.2s; }
-    .order-button:hover { background: #009210; }
-    .order-btn-title { color: #ffffff; font-size: 15px; font-weight: 900; text-align: left; }
-    .order-btn-sub { color: #dcfce7; font-size: 10.5px; font-weight: 500; text-align: left; margin-top: 1px; }
-    .arrow-circle { width: 32px; height: 32px; border-radius: 50%; background: #ffffff; color: #00AA13; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 16px; }
+    .order-button {
+      background: #00AA13;
+      color: #ffffff;
+      border: none;
+      border-radius: 14px;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(0, 170, 19, 0.35);
+      transition: all 0.2s;
+    }
+    .order-button:hover { background: #009310; transform: translateY(-1px); }
+    .order-btn-title { font-size: 13.5px; font-weight: 900; letter-spacing: 0.3px; }
+    .order-btn-sub { font-size: 10px; color: #dcfce7; margin-top: 2px; }
+    .arrow-circle { width: 32px; height: 32px; border-radius: 50%; background: #ffffff; color: #00AA13; display: flex; align-items: center; justify-content: center; font-weight: 900; }
 
-    /* Searching Overlay */
-    .searching-overlay { position: absolute; inset: 0; background: rgba(255,255,255,0.96); z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; text-align: center; }
-    .searching-icon-wrap { width: 80px; height: 80px; border-radius: 50%; background: #f0fdf4; display: flex; align-items: center; justify-content: center; font-size: 36px; margin-bottom: 16px; position: relative; }
-    .radar-pulse-ring { position: absolute; width: 80px; height: 80px; border-radius: 50%; border: 2px solid #00AA13; animation: radarBreathe 2s infinite ease-out; }
-    @keyframes radarBreathe { 0% { transform: scale(0.6); opacity: 0.9; } 100% { transform: scale(2.4); opacity: 0; } }
-
-    /* MECHANIC SHEET STYLES */
-    .mech-scroll { flex: 1; overflow-y: auto; padding: 12px 16px 20px 16px; display: flex; flex-direction: column; gap: 12px; }
-    .revenue-card { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #ffffff; border-radius: 18px; padding: 14px; box-shadow: 0 4px 14px rgba(15, 23, 42, 0.25); }
-    .revenue-top { display: flex; justify-content: space-between; align-items: center; }
-    .rev-label { font-size: 10.5px; font-weight: 700; color: #94a3b8; text-transform: uppercase; }
-    .rev-badge { background: #16a34a; color: #ffffff; font-size: 9px; font-weight: 800; padding: 2px 6px; border-radius: 4px; }
-    .rev-amount { font-size: 24px; font-weight: 900; color: #38bdf8; margin: 4px 0 8px 0; }
-    .rev-actions { display: flex; gap: 8px; }
+    /* Mechanic View */
+    .mech-scroll { flex: 1; overflow-y: auto; padding: 12px 18px; display: flex; flex-direction: column; gap: 12px; }
+    .revenue-card {
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      border-radius: 16px;
+      padding: 14px 16px;
+      color: #ffffff;
+      border: 1px solid #334155;
+    }
+    .revenue-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    .rev-label { font-size: 11px; color: #94a3b8; font-weight: 800; text-transform: uppercase; }
+    .rev-badge { background: rgba(56, 189, 248, 0.2); color: #38bdf8; font-size: 9.5px; font-weight: 800; padding: 2px 6px; border-radius: 6px; }
+    .rev-amount { font-size: 26px; font-weight: 900; color: #38bdf8; margin-bottom: 6px; }
     .payout-btn { background: #0284c7; color: white; border: none; padding: 6px 12px; border-radius: 8px; font-size: 11px; font-weight: 800; cursor: pointer; }
 
-    /* Standby status toggle */
-    .standby-bar { background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; }
-    .standby-label { font-size: 12px; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 6px; }
-    .switch-toggle { position: relative; width: 44px; height: 24px; background: #16a34a; border-radius: 12px; cursor: pointer; transition: background 0.2s; }
-    .switch-knob { position: absolute; top: 2px; right: 3px; width: 20px; height: 20px; background: white; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2); transition: all 0.2s; }
+    /* Switch */
+    .switch-toggle {
+      width: 48px;
+      height: 26px;
+      background: #00AA13;
+      border-radius: 14px;
+      position: relative;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .switch-knob {
+      width: 22px;
+      height: 22px;
+      background: #ffffff;
+      border-radius: 50%;
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      transition: all 0.2s;
+    }
     .switch-toggle.off { background: #94a3b8; }
-    .switch-toggle.off .switch-knob { right: 21px; }
+    .switch-toggle.off .switch-knob { right: 24px; }
+
+    /* Searching Overlay */
+    .searching-overlay {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(255, 255, 255, 0.96);
+      border-top-left-radius: 26px;
+      border-top-right-radius: 26px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      text-align: center;
+      z-index: 700;
+    }
+    .searching-icon-wrap { width: 70px; height: 70px; border-radius: 50%; background: #e6f7eb; display: flex; align-items: center; justify-content: center; font-size: 32px; margin-bottom: 14px; position: relative; }
+    .radar-pulse-ring {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      border: 3px solid #00AA13;
+      animation: pulse 1.8s infinite;
+    }
+    @keyframes pulse { 0% { transform: scale(1); opacity: 0.8; } 100% { transform: scale(2.2); opacity: 0; } }
 
     /* Modals */
-    .modal-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.65); z-index: 2000; display: flex; align-items: flex-end; justify-content: center; }
-    .modal-sheet { width: 100%; background: #ffffff; border-top-left-radius: 24px; border-top-right-radius: 24px; padding: 20px; text-align: center; color: #0f172a; }
+    .modal-backdrop {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.6);
+      display: flex;
+      align-items: flex-end;
+      z-index: 1500;
+    }
+    .modal-sheet {
+      background: #ffffff;
+      width: 100%;
+      border-top-left-radius: 26px;
+      border-top-right-radius: 26px;
+      padding: 24px;
+      color: #0f172a;
+      box-shadow: 0 -10px 30px rgba(0,0,0,0.25);
+    }
+
+    /* Star Rating */
+    .star-item { font-size: 32px; color: #cbd5e1; cursor: pointer; transition: color 0.15s; }
+    .star-item.active { color: #fbbf24; }
+    .feedback-chip { background: #f1f5f9; border: 1px solid #cbd5e1; padding: 4px 10px; border-radius: 9999px; font-size: 11px; font-weight: 700; cursor: pointer; }
+    .feedback-chip.active { background: #fef3c7; border-color: #f59e0b; color: #b45309; }
 
     .hidden { display: none !important; }
   </style>
 </head>
 <body>
 
-  <!-- Header -->
+  <!-- Top Bar -->
   <header>
     <div class="brand-box">
       <div class="brand-icon">🚗</div>
       <div>
         <div style="display: flex; align-items: center; gap: 8px;">
-          <span class="brand-title">MONTIR SIAGA — MULTI ROLE EMULATOR</span>
-          <span class="status-badge">● LIVE SERVER AKTIF</span>
+          <div class="brand-title">MONTIR SIAGA — SMARTPHONE PC EMULATOR</div>
+          <span class="status-badge">DEWAKODING STACK</span>
         </div>
-        <div class="brand-sub">POV Driver (Hanya Input Kerusakan & Panggil), POV Montir (Standby & Dashboard Pendapatan), POV Owner (Master Data & Kas Admin 10k)</div>
+        <div class="brand-sub">OpenStreetMap OSRM Routing • FCM Push Alerts • Rating & Komentar • Filament Admin</div>
       </div>
     </div>
 
-    <div class="nav-btn-group">
-      <button class="nav-btn" id="btnTabDriver" onclick="switchTab('driver')">🚗 HP Driver</button>
-      <button class="nav-btn" id="btnTabMech" onclick="switchTab('mech')">🔧 HP Montir</button>
-      <button class="nav-btn active" id="btnTabDual" onclick="switchTab('dual')">📲 Dual HP (Berdampingan)</button>
-      <a href="http://localhost:4000" target="_blank" style="text-decoration:none;" class="nav-btn" style="color:#fbbf24;">👑 Owner Command Center ↗</a>
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <div class="nav-btn-group">
+        <button class="nav-btn active" id="btnTabDual" onclick="switchTab('dual')">Dual View (Driver & Montir)</button>
+        <button class="nav-btn" id="btnTabDriver" onclick="switchTab('driver')">Driver Mobil</button>
+        <button class="nav-btn" id="btnTabMech" onclick="switchTab('mech')">Montir Siaga</button>
+      </div>
+
+      <a href="/" target="_blank" class="filament-link">
+        <span>👑</span> Buka Filament 3 Web Admin
+      </a>
     </div>
   </header>
 
-  <!-- Main Canvas -->
-  <main id="canvas">
-
-    <!-- ================= SMARTPHONE 1: DRIVER / PEMILIK MOBIL ================= -->
+  <!-- Dual Smartphone Canvas -->
+  <main>
+    
+    <!-- ================= SMARTPHONE 1: DRIVER (PEMILIK MOBIL) ================= -->
     <div class="phone-wrapper" id="driverWrapper">
-      <div class="phone-label">📱 POV PEMILIK MOBIL (HANYA INPUT KERUSAKAN)</div>
+      <div class="phone-label">🚘 POV PEMILIK MOBIL (INPUT KENDALA & PANGGIL MONTIR)</div>
       <div class="phone-bezel">
         <div class="dynamic-island"><div class="lens"></div></div>
 
+        <!-- FCM Toast Driver -->
+        <div class="fcm-toast hidden" id="fcmToastDriver">
+          <div class="fcm-icon" id="fcmIconDriver">🚨</div>
+          <div class="fcm-content">
+            <div class="fcm-title" id="fcmTitleDriver">Notifikasi FCM</div>
+            <div class="fcm-body" id="fcmBodyDriver">Deskripsi pesan</div>
+          </div>
+        </div>
+
         <!-- Phone Status Bar -->
         <div class="phone-status-bar">
-          <span id="clockVal">15:45</span>
+          <span>16:05</span>
           <span>5G &nbsp; 100% 🔋</span>
         </div>
 
-        <!-- Map -->
+        <!-- Map Section: Real OpenStreetMap (OSM) Free -->
         <div class="map-container">
           <div id="driverMap"></div>
 
@@ -207,7 +414,7 @@
               <div class="address-divider"></div>
               <div class="address-row">
                 <span class="dot-orange"></span>
-                <span>Montir Terdekat (Pak Agus - 1.2 km)</span>
+                <span id="etaInfoText">Montir Terdekat (Pak Agus - 2.4 km • 4 mnt)</span>
               </div>
             </div>
             <button class="edit-btn" onclick="editAddress()">Edit</button>
@@ -291,7 +498,7 @@
               <span>📡</span>
             </div>
             <h3 style="font-size:16px; font-weight:900; color:#0f172a; margin-bottom:4px;">Mencari Montir Terdekat...</h3>
-            <p style="font-size:12px; color:#64748b; margin-bottom:12px;" id="searchingDescText">Memindai montir siaga di sekitar lokasi Anda...</p>
+            <p style="font-size:12px; color:#64748b; margin-bottom:12px;" id="searchingDescText">Memindai montir siaga di sekitar lokasi Anda via OpenStreetMap...</p>
             
             <div style="width:100%; background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:10px; text-align:left; font-size:12px; margin-bottom:14px;">
               <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
@@ -311,9 +518,9 @@
 
           <!-- QRIS Modal Driver -->
           <div class="modal-backdrop hidden" id="qrisModal">
-            <div class="modal-sheet">
+            <div class="modal-sheet" style="text-align: center;">
               <h3 style="font-weight:900; font-size:15px; margin-bottom:6px;">QRIS Tagihan Jasa Montir</h3>
-              <div style="font-size:64px; line-height:1; margin:8px 0;">📱</div>
+              <div style="font-size:56px; line-height:1; margin:8px 0;">📱</div>
               <div style="font-size:11px; color:#64748b;">NMID: ID1092837465 • <strong id="qrisTechName">Pak Agus Santoso</strong></div>
               <div style="font-size:24px; font-weight:900; color:#00AA13; margin:8px 0;" id="qrisTotalVal">Rp 85.000</div>
               <p style="font-size:11px; color:#15803d; margin-bottom:14px;">100% uang pembayaran ini masuk langsung ke rekening montir</p>
@@ -323,20 +530,63 @@
             </div>
           </div>
 
+          <!-- Dewakoding Modul 8: Fitur Rating & Comment Modal -->
+          <div class="modal-backdrop hidden" id="ratingModal">
+            <div class="modal-sheet" style="padding:22px; text-align:center;">
+              <div style="font-size:36px; margin-bottom:4px;">⭐</div>
+              <h3 style="font-weight:900; font-size:16px; color:#0f172a;">Beri Rating Montir</h3>
+              <p style="font-size:11.5px; color:#64748b; margin-top:2px;">Bagaimana pelayanan perbaikan mobil oleh <strong id="rateTechName">Pak Agus Santoso</strong>?</p>
+              
+              <!-- 5 Interactive Stars -->
+              <div class="star-rating-row" style="margin:14px 0; font-size:32px; color:#cbd5e1; user-select:none;">
+                <span class="star-item active" onclick="setRating(1)">★</span>
+                <span class="star-item active" onclick="setRating(2)">★</span>
+                <span class="star-item active" onclick="setRating(3)">★</span>
+                <span class="star-item active" onclick="setRating(4)">★</span>
+                <span class="star-item active" onclick="setRating(5)">★</span>
+              </div>
+              <div style="font-size:11px; font-weight:800; color:#d97706;" id="ratingLabel">Sangat Memuaskan (5/5)</div>
+              
+              <!-- Quick Feedback Chips -->
+              <div style="display:flex; flex-wrap:wrap; gap:6px; margin:12px 0; justify-content:center;">
+                <button class="feedback-chip active" onclick="appendFeedback('Pelayanan Cepat')">⚡ Cepat Sampai</button>
+                <button class="feedback-chip" onclick="appendFeedback('Montir Sangat Ahli')">🔧 Sangat Ahli</button>
+                <button class="feedback-chip" onclick="appendFeedback('Ramah & Sopan')">😊 Ramah</button>
+                <button class="feedback-chip" onclick="appendFeedback('Harga Sesuai')">💰 Harga Pas</button>
+              </div>
+
+              <!-- Comment Textarea -->
+              <textarea id="commentText" style="width:100%; height:60px; padding:8px 10px; border:1px solid #cbd5e1; border-radius:10px; font-size:11.5px; resize:none; outline:none;" placeholder="Tuliskan pengalaman servis Anda..."></textarea>
+
+              <button onclick="submitRating()" style="width:100%; margin-top:12px; padding:12px; background:#00AA13; color:#ffffff; border:none; border-radius:12px; font-weight:900; font-size:13px; cursor:pointer;">
+                Kirim Ulasan & Selesai ➔
+              </button>
+            </div>
+          </div>
+
         </div>
       </div>
     </div>
 
 
-    <!-- ================= SMARTPHONE 2: MONTIR / PEMILIK BENGKEL ================= -->
+    <!-- ================= SMARTPHONE 2: MONTIR (PEMILIK BENGKEL / MEKANIK) ================= -->
     <div class="phone-wrapper" id="mechWrapper">
       <div class="phone-label">🔧 POV MONTIR (STANDBY & DASHBOARD PENDAPATAN)</div>
       <div class="phone-bezel">
         <div class="dynamic-island"><div class="lens"></div></div>
 
+        <!-- FCM Toast Montir -->
+        <div class="fcm-toast hidden" id="fcmToastMech">
+          <div class="fcm-icon" id="fcmIconMech">🚨</div>
+          <div class="fcm-content">
+            <div class="fcm-title" id="fcmTitleMech">Notifikasi FCM</div>
+            <div class="fcm-body" id="fcmBodyMech">Deskripsi pesan</div>
+          </div>
+        </div>
+
         <!-- Phone Status Bar -->
         <div class="phone-status-bar">
-          <span>15:45</span>
+          <span>16:05</span>
           <span>5G &nbsp; 100% 🔋</span>
         </div>
 
@@ -345,7 +595,7 @@
           <div style="display:flex; align-items:center; gap:10px;">
             <div style="font-size:24px; background:#1e293b; width:40px; height:40px; border-radius:12px; display:flex; align-items:center; justify-content:center;">👨‍🔧</div>
             <div>
-              <div style="font-size:13.5px; font-weight:800;">Pak Agus Santoso</div>
+              <div style="font-size:13.5px; font-weight:800;" id="mechTopName">Pak Agus Santoso</div>
               <div style="font-size:10.5px; color:#94a3b8;">Bengkel Berkah • Vario B 4921 TZX</div>
             </div>
           </div>
@@ -356,7 +606,7 @@
           </div>
         </div>
 
-        <!-- Map Navigation for Mechanic -->
+        <!-- Map Navigation for Mechanic (Dewakoding Module 6: OSRM Route) -->
         <div class="map-container">
           <div id="mechMap"></div>
           <div style="position:absolute; top:10px; left:12px; background:rgba(15,23,42,0.9); color:white; padding:6px 10px; border-radius:10px; font-size:11px; font-weight:800; z-index:500;">
@@ -378,7 +628,7 @@
               </div>
               <div class="rev-amount" id="mechIncomeTotal">Rp 485.000</div>
               <div style="display:flex; justify-content:space-between; align-items:center;">
-                <div style="font-size:11px; color:#cbd5e1;">⭐ 4.9 • 342 Servis Sukses</div>
+                <div style="font-size:11px; color:#cbd5e1;" id="mechRatingDisplay">⭐ 4.9 • 342 Servis Sukses</div>
                 <button class="payout-btn" onclick="alert('Permintaan pencairan dana Rp 485.000 ke rekening BCA Pak Agus telah diproses!')">Cairkan Saldo ➔</button>
               </div>
             </div>
@@ -456,12 +706,31 @@
     let mechBalance = 485000;
     let currentSymptom = 'Aki soak tidak bisa starter';
     let isStandbyOnline = true;
+    let selectedRating = 5;
 
     const coordsDriver = [-6.2255, 106.8120];
     const coordsMech = [-6.2215, 106.8165];
 
     let mapDriver = null;
     let mapMech = null;
+    let routePolylineDriver = null;
+    let routePolylineMech = null;
+
+    function showToast(role, icon, title, message) {
+      const toast = document.getElementById(role === 'driver' ? 'fcmToastDriver' : 'fcmToastMech');
+      const iconEl = document.getElementById(role === 'driver' ? 'fcmIconDriver' : 'fcmIconMech');
+      const titleEl = document.getElementById(role === 'driver' ? 'fcmTitleDriver' : 'fcmTitleMech');
+      const bodyEl = document.getElementById(role === 'driver' ? 'fcmBodyDriver' : 'fcmBodyMech');
+
+      iconEl.innerText = icon;
+      titleEl.innerText = title;
+      bodyEl.innerText = message;
+      toast.classList.remove('hidden');
+
+      setTimeout(() => {
+        toast.classList.add('hidden');
+      }, 4500);
+    }
 
     function initMaps() {
       // Driver Map (OpenStreetMap HOT - Free & Open Source)
@@ -471,7 +740,7 @@
       // Driver Pin
       const driverIcon = L.divIcon({
         className: 'custom-driver-pin',
-        html: '<div style="width:36px; height:36px; border-radius:50%; background:#00AA13; border:3px solid #FFFFFF; color:#FFFFFF; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:18px; box-shadow:0 4px 12px rgba(0,170,19,0.4);">↑</div>',
+        html: '<div style="width:36px; height:36px; border-radius:50%; background:#00AA13; border:3px solid #FFFFFF; color:#FFFFFF; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:18px; box-shadow:0 4px 12px rgba(0,170,19,0.4);">🚘</div>',
         iconSize: [36, 36],
         iconAnchor: [18, 18],
       });
@@ -480,22 +749,46 @@
       // Dest Pin (Pak Agus)
       const destIcon = L.divIcon({
         className: 'custom-dest-pin',
-        html: '<div style="width:32px; height:32px; border-radius:50%; background:#FA541C; border:3px solid #FFFFFF; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(250,84,28,0.4);"><div style="width:10px; height:10px; border-radius:50%; background:#FA541C; border:2px solid #FFFFFF;"></div></div>',
-        iconSize: [32, 32],
-        iconAnchor: [16, 16],
+        html: '<div style="width:34px; height:34px; border-radius:50%; background:#DC2626; border:3px solid #FFFFFF; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(220,38,38,0.4); font-size:16px;">👨‍🔧</div>',
+        iconSize: [34, 34],
+        iconAnchor: [17, 17],
       });
       L.marker(coordsMech, { icon: destIcon }).addTo(mapDriver);
-
-      // Route
-      const route = [coordsDriver, [(coordsDriver[0]+coordsMech[0])/2, coordsDriver[1]+0.002], coordsMech];
-      L.polyline(route, { color: '#00AA13', weight: 5 }).addTo(mapDriver);
 
       // Mech Map
       mapMech = L.map('mechMap', { zoomControl: false, attributionControl: false }).setView(coordsMech, 15);
       L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', { maxZoom: 19, subdomains: 'abc' }).addTo(mapMech);
       L.marker(coordsMech, { icon: destIcon }).addTo(mapMech);
       L.marker(coordsDriver, { icon: driverIcon }).addTo(mapMech);
-      L.polyline(route, { color: '#00AA13', weight: 5 }).addTo(mapMech);
+
+      // Fetch Real OSRM Road Polyline from OpenStreetMap
+      fetchRouteOSRM();
+    }
+
+    function fetchRouteOSRM() {
+      const url = `https://router.project-osrm.org/route/v1/driving/${coordsMech[1]},${coordsMech[0]};${coordsDriver[1]},${coordsDriver[0]}?overview=full&geometries=geojson`;
+      fetch(url)
+        .then(r => r.json())
+        .then(data => {
+          if (data.routes && data.routes[0]) {
+            const coords = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+            const distKm = (data.routes[0].distance / 1000).toFixed(1);
+            const durMin = Math.ceil(data.routes[0].duration / 60);
+
+            document.getElementById('etaInfoText').innerText = `Pak Agus Santoso (${distKm} km • ${durMin} mnt lagi)`;
+
+            if (routePolylineDriver) mapDriver.removeLayer(routePolylineDriver);
+            if (routePolylineMech) mapMech.removeLayer(routePolylineMech);
+
+            routePolylineDriver = L.polyline(coords, { color: '#00AA13', weight: 5, opacity: 0.9 }).addTo(mapDriver);
+            routePolylineMech = L.polyline(coords, { color: '#00AA13', weight: 5, opacity: 0.9 }).addTo(mapMech);
+          }
+        })
+        .catch(() => {
+          const fallbackRoute = [coordsDriver, [(coordsDriver[0]+coordsMech[0])/2, coordsDriver[1]+0.002], coordsMech];
+          L.polyline(fallbackRoute, { color: '#00AA13', weight: 4 }).addTo(mapDriver);
+          L.polyline(fallbackRoute, { color: '#00AA13', weight: 4 }).addTo(mapMech);
+        });
     }
 
     // Driver functions
@@ -528,7 +821,7 @@
     function topUpBalance(amt) {
       driverBalance += amt;
       document.getElementById('driverBalanceText').innerText = 'Rp ' + driverBalance.toLocaleString('id-ID');
-      alert('Top Up Berhasil! Saldo MontirPay bertambah Rp ' + amt.toLocaleString('id-ID'));
+      showToast('driver', '💳', 'Top Up MontirPay Berhasil', `Saldo bertambah Rp ${amt.toLocaleString('id-ID')}`);
     }
 
     function startOrder() {
@@ -551,22 +844,25 @@
       document.getElementById('summaryKendala').innerText = note;
       document.getElementById('searchOverlay').classList.remove('hidden');
 
+      showToast('driver', '📡', 'Mencari Montir Terdekat', 'Memindai montir dalam radius 5 km via OpenStreetMap...');
+
       // Ringing on Montir's Phone
       setTimeout(() => {
         document.getElementById('incomingProblemText').innerText = 'Kendala: ' + note;
         document.getElementById('incomingModal').classList.remove('hidden');
+        showToast('mech', '🚨', 'Panggilan Darurat Masuk!', `Toyota Avanza mogok: ${note}`);
       }, 1000);
 
       // Sync with Backend
-      fetch('/api/order', {
+      fetch('/api/order/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           service: { id: 'emergency_call', title: 'Panggilan Montir Siaga', price: 85000 },
-          address: document.getElementById('locAddressText').innerText,
+          locationText: document.getElementById('locAddressText').innerText,
           coords: { latitude: coordsDriver[0], longitude: coordsDriver[1] },
-          vehicle: document.getElementById('driverVehName').innerText,
-          problemNote: note,
+          vehicleName: document.getElementById('driverVehName').innerText,
+          note: note,
         })
       }).catch(e => {});
     }
@@ -574,6 +870,9 @@
     function cancelOrder() {
       document.getElementById('searchOverlay').classList.add('hidden');
       document.getElementById('incomingModal').classList.add('hidden');
+      driverBalance += 10000;
+      document.getElementById('driverBalanceText').innerText = 'Rp ' + driverBalance.toLocaleString('id-ID');
+      showToast('driver', '↩️', 'Order Dibatalkan', 'Biaya admin Rp 10.000 telah dikembalikan ke MontirPay Anda.');
     }
 
     // Montir functions
@@ -585,10 +884,12 @@
         sw.classList.remove('off');
         st.innerText = 'ONLINE';
         st.style.color = '#34d399';
+        showToast('mech', '🟢', 'Status Siaga Aktif', 'Radar GPS aktif menerima panggilan mobil mogok.');
       } else {
         sw.classList.add('off');
         st.innerText = 'OFFLINE';
         st.style.color = '#94a3b8';
+        showToast('mech', '🔴', 'Status Offline', 'Anda tidak akan menerima panggilan darurat.');
       }
     }
 
@@ -600,9 +901,14 @@
       document.getElementById('mechIdleBox').classList.add('hidden');
       document.getElementById('mechActiveBox').classList.remove('hidden');
 
-      alert('Panggilan Diterima! Pak Agus segera meluncur ke lokasi mobil mogok.');
+      showToast('mech', '🛵', 'Panggilan Diterima!', 'Rute OpenStreetMap aktif. Segera meluncur ke lokasi.');
+      showToast('driver', '✅', 'Montir Ditemukan!', 'Pak Agus Santoso sedang meluncur ke lokasi mobil Anda.');
 
-      fetch('/api/order/accept', { method: 'POST' }).catch(e => {});
+      fetch('/api/order/accept', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mechanicId: 'm1' })
+      }).catch(e => {});
     }
 
     function ignoreOrder() {
@@ -612,13 +918,29 @@
     function mechArrived() {
       document.getElementById('btnArrived').classList.add('hidden');
       document.getElementById('btnRepairing').classList.remove('hidden');
-      alert('Status diupdate: Montir telah tiba di lokasi mobil driver!');
+
+      showToast('mech', '📍', 'Tiba di Lokasi', 'Anda telah sampai di lokasi mobil mogok driver.');
+      showToast('driver', '👨‍🔧', 'Montir Telah Tiba!', 'Pak Agus Santoso telah sampai di depan mobil Anda.');
+
+      fetch('/api/order/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'arrived' })
+      }).catch(e => {});
     }
 
     function mechRepairing() {
       document.getElementById('btnRepairing').classList.add('hidden');
       document.getElementById('btnIssueBill').classList.remove('hidden');
-      alert('Status diupdate: Perbaikan mobil sedang dikerjakan...');
+
+      showToast('mech', '🔧', 'Mulai Servis', 'Pengecekan dan perbaikan darurat sedang berlangsung.');
+      showToast('driver', '🔧', 'Sedang Diperbaiki', 'Montir sedang memeriksa aki dan mesin mobil Anda.');
+
+      fetch('/api/order/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'repairing' })
+      }).catch(e => {});
     }
 
     function mechSendBill() {
@@ -633,10 +955,12 @@
       document.getElementById('qrisTotalVal').innerText = 'Rp ' + amt.toLocaleString('id-ID');
       document.getElementById('qrisModal').classList.remove('hidden');
 
-      fetch('/api/order/bill', {
+      showToast('driver', '💳', 'Tagihan QRIS Diterbitkan', `Total biaya jasa & part: Rp ${amt.toLocaleString('id-ID')}`);
+
+      fetch('/api/order/generate-bill', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount: amt, desc: 'Jasa servis darurat & suku cadang' })
+        body: JSON.stringify({ billAmount: amt, billNote: 'Jasa servis darurat & part' })
       }).catch(e => {});
     }
 
@@ -648,9 +972,10 @@
       mechBalance += amt;
       document.getElementById('mechIncomeTotal').innerText = 'Rp ' + mechBalance.toLocaleString('id-ID');
 
-      alert('Pembayaran QRIS Berhasil! Rp ' + amt.toLocaleString('id-ID') + ' telah masuk ke saldo montir.');
+      showToast('driver', '🎉', 'Pembayaran QRIS Berhasil!', `Rp ${amt.toLocaleString('id-ID')} telah dibayarkan langsung ke montir.`);
+      showToast('mech', '💰', 'Pembayaran Masuk!', `Rp ${amt.toLocaleString('id-ID')} berhasil ditambahkan ke saldo dompet Anda.`);
 
-      // Reset
+      // Reset Mechanic State
       document.getElementById('mechActiveBox').classList.add('hidden');
       document.getElementById('mechIdleBox').classList.remove('hidden');
       document.getElementById('btnArrived').classList.remove('hidden');
@@ -658,6 +983,53 @@
       document.getElementById('btnIssueBill').classList.add('hidden');
 
       fetch('/api/order/pay-qris', { method: 'POST' }).catch(e => {});
+
+      // Dewakoding Modul 8: Trigger Rating Modal for Driver
+      setTimeout(() => {
+        document.getElementById('ratingModal').classList.remove('hidden');
+      }, 700);
+    }
+
+    // Dewakoding Modul 8: Rating & Comment Logic
+    function setRating(val) {
+      selectedRating = val;
+      const stars = document.querySelectorAll('.star-item');
+      stars.forEach((s, idx) => {
+        if (idx < val) s.classList.add('active');
+        else s.classList.remove('active');
+      });
+
+      const labels = [
+        'Sangat Buruk (1/5)',
+        'Kurang Puas (2/5)',
+        'Cukup Baik (3/5)',
+        'Puas (4/5)',
+        'Sangat Memuaskan (5/5)'
+      ];
+      document.getElementById('ratingLabel').innerText = labels[val - 1];
+    }
+
+    function appendFeedback(text) {
+      const txt = document.getElementById('commentText');
+      if (txt.value) txt.value += ', ' + text;
+      else txt.value = text;
+    }
+
+    function submitRating() {
+      const comment = document.getElementById('commentText').value || 'Pelayanan sangat memuaskan dan cepat!';
+      document.getElementById('ratingModal').classList.add('hidden');
+
+      showToast('driver', '⭐', 'Terima Kasih Atas Ulasan Anda!', `Rating ⭐ ${selectedRating} telah dikirim.`);
+
+      fetch('/api/order/rate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          rating: selectedRating,
+          comment: comment,
+          mechanicId: 'm1'
+        })
+      }).catch(e => {});
     }
 
     function switchTab(t) {
@@ -678,17 +1050,11 @@
         dWrap.classList.remove('hidden');
         mWrap.classList.remove('hidden');
       }
-
-      setTimeout(() => {
-        if (mapDriver) mapDriver.invalidateSize();
-        if (mapMech) mapMech.invalidateSize();
-      }, 200);
     }
 
-    window.addEventListener('DOMContentLoaded', () => {
+    window.onload = () => {
       initMaps();
-      document.getElementById('damageNote').value = currentSymptom;
-    });
+    };
   </script>
 </body>
 </html>
