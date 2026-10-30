@@ -72,6 +72,38 @@ let state = {
   chatMessages: [
     { id: '1', sender: 'system', text: 'Sistem Montir Siaga aktif. Biaya admin platform Rp 10.000 per pemanggilan.' },
   ],
+  orderHistory: [
+    {
+      id: 'MS-8921',
+      date: 'Hari ini, 14:20',
+      driver: 'Toyota Avanza (B 1234 SKA)',
+      damage: 'Aki soak tidak bisa starter',
+      mechanic: 'Pak Agus Santoso',
+      adminFee: 10000,
+      mechanicBill: 85000,
+      status: 'SELESAI (LUNAS)',
+    },
+    {
+      id: 'MS-8919',
+      date: 'Hari ini, 11:05',
+      driver: 'Toyota Innova (B 8821 KLO)',
+      damage: 'Ban bocor kena baut',
+      mechanic: 'Bambang Irawan',
+      adminFee: 10000,
+      mechanicBill: 65000,
+      status: 'SELESAI (LUNAS)',
+    },
+    {
+      id: 'MS-8915',
+      date: 'Kemarin, 21:40',
+      driver: 'Mitsubishi Xpander (B 4410 ZAQ)',
+      damage: 'Mesin overheat di jalan tol',
+      mechanic: 'Pak Agus Santoso',
+      adminFee: 10000,
+      mechanicBill: 120000,
+      status: 'SELESAI (LUNAS)',
+    },
+  ],
 };
 
 function broadcast(eventType, data) {
@@ -217,6 +249,18 @@ app.post('/api/order/pay-qris', (req, res) => {
     text: `Pembayaran QRIS Rp ${billAmount.toLocaleString('id-ID')} BERHASIL! Dana 100% telah diteruskan ke dompet montir.`,
   });
 
+  if (state.orderHistory) {
+    state.orderHistory.unshift({
+      id: state.activeOrder.id,
+      date: 'Baru Saja',
+      driver: state.activeOrder.vehicle || 'Pengemudi Mobil',
+      damage: state.activeOrder.note || state.activeOrder.service?.title || 'Perbaikan Darurat',
+      mechanic: state.activeOrder.mechanic?.name || 'Pak Agus Santoso',
+      adminFee: 10000,
+      mechanicBill: billAmount,
+      status: 'SELESAI (LUNAS)',
+    });
+  }
   console.log(`[QRIS] Driver paid Rp ${billAmount} via QRIS -> 100% to mechanic!`);
   broadcast('QRIS_PAID', { order: state.activeOrder, mechanics: state.mechanics });
   res.json({ success: true, order: state.activeOrder });
@@ -240,6 +284,22 @@ app.post('/api/order/reset', (req, res) => {
   console.log('[ORDER] Reset to idle');
   broadcast('ORDER_RESET', null);
   res.json({ success: true });
+});
+
+// 9. Sweep all petty cash
+app.post('/api/petty-cash/sweep', (req, res) => {
+  const { pin } = req.body;
+  if (pin !== '1234') {
+    return res.status(403).json({ success: false, error: 'PIN Keamanan Salah! Akses ditolak.' });
+  }
+  const amount = state.platformStats.platformNetRevenue || 0;
+  if (amount <= 0) {
+    return res.status(400).json({ success: false, error: 'Saldo kas saat ini Rp 0. Tidak ada dana yang bisa ditarik.' });
+  }
+  state.platformStats.platformNetRevenue = 0;
+  console.log('[PETTY CASH] Owner successfully swept all cash: Rp ' + amount.toLocaleString('id-ID'));
+  broadcast('CASH_SWEPT', { platformStats: state.platformStats });
+  res.json({ success: true, amountWithdrawn: amount });
 });
 
 // 8. Toggle mechanic online
@@ -373,11 +433,176 @@ app.get('/', (req, res) => {
         </div>
       `}
     </div>
+
+    <!-- Master Data: Kas & Petty Cash Widget with PIN Protection -->
+    <div class="bg-slate-800 border border-slate-700/80 rounded-2xl p-5 shadow-xl">
+      <div class="flex items-center justify-between mb-3">
+        <div class="flex items-center gap-2.5">
+          <span class="text-xl">🏦</span>
+          <div>
+            <h3 class="font-extrabold text-sm text-white">PETI KAS & SALDO ADMIN OWNER</h3>
+            <p class="text-[11px] text-slate-400">Total akumulasi admin pemanggilan Rp 10.000 tersimpan di kas</p>
+          </div>
+        </div>
+        <button onclick="handleSweepCash()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs px-4 py-2 rounded-xl shadow-lg flex items-center gap-2 transition">
+          <span>💸</span> Ambil Semua Cash
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
+        <div class="bg-slate-900/90 p-3.5 rounded-xl border border-slate-700 flex justify-between items-center">
+          <div>
+            <div class="text-[10px] text-slate-400 font-bold uppercase">Saldo Kas Tersedia:</div>
+            <div class="text-2xl font-black text-emerald-400 mt-0.5">Rp ${Number(state.platformStats.platformNetRevenue).toLocaleString('id-ID')}</div>
+          </div>
+          <div class="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2.5 py-1 rounded-lg font-bold">
+            🔒 Siap Ditarik
+          </div>
+        </div>
+        <div class="bg-slate-900/90 p-3.5 rounded-xl border border-slate-700 flex justify-between items-center">
+          <div>
+            <div class="text-[10px] text-slate-400 font-bold uppercase">Biaya Admin Platform:</div>
+            <div class="text-2xl font-black text-amber-400 mt-0.5">Rp 10.000 <span class="text-xs text-slate-400 font-normal">/ order</span></div>
+          </div>
+          <div class="text-xs bg-amber-500/10 text-amber-400 border border-amber-500/30 px-2.5 py-1 rounded-lg font-bold">
+            100% Hak Owner
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Master Data: Mitra Montir & Bengkel -->
+    <div class="bg-slate-800 border border-slate-700/80 rounded-2xl p-5 shadow-xl">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-2.5">
+          <span class="text-xl">🔧</span>
+          <div>
+            <h3 class="font-extrabold text-sm text-white">MASTER DATA MITRA MONTIR & BENGKEL</h3>
+            <p class="text-[11px] text-slate-400">Daftar montir perorangan dan bengkel mitra yang terdaftar di platform</p>
+          </div>
+        </div>
+        <span class="text-xs bg-slate-700 text-slate-300 font-bold px-3 py-1 rounded-full">
+          ${state.mechanics.length} Mitra Aktif
+        </span>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs border-collapse">
+          <thead>
+            <tr class="border-b border-slate-700 text-slate-400 font-bold text-[11px] uppercase">
+              <th class="py-2.5 px-3">Nama Montir / Bengkel</th>
+              <th class="py-2.5 px-3">Kontak / HP</th>
+              <th class="py-2.5 px-3">Kendaraan Operasional</th>
+              <th class="py-2.5 px-3">Keahlian</th>
+              <th class="py-2.5 px-3">Rating</th>
+              <th class="py-2.5 px-3">Total Servis</th>
+              <th class="py-2.5 px-3">Status</th>
+              <th class="py-2.5 px-3 text-right">Dompet Jasa</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-700/50">
+            ${state.mechanics.map(m => `
+              <tr class="hover:bg-slate-700/30 transition">
+                <td class="py-3 px-3 font-bold text-white flex items-center gap-2">
+                  <span class="text-base">👨‍🔧</span> ${m.name}
+                </td>
+                <td class="py-3 px-3 text-slate-300 font-mono">${m.phone}</td>
+                <td class="py-3 px-3 text-slate-300">${m.vehicle}</td>
+                <td class="py-3 px-3 text-slate-400">${m.specialty}</td>
+                <td class="py-3 px-3 text-amber-400 font-bold">⭐ ${m.rating}</td>
+                <td class="py-3 px-3 text-slate-300 font-semibold">${m.jobsCompleted} order</td>
+                <td class="py-3 px-3">
+                  <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${m.status === 'online' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-slate-600 text-slate-300'}">
+                    ${m.status.toUpperCase()}
+                  </span>
+                </td>
+                <td class="py-3 px-3 text-right font-black text-sky-400">Rp ${Number(m.walletBalance).toLocaleString('id-ID')}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Master Data: Riwayat Semua Order -->
+    <div class="bg-slate-800 border border-slate-700/80 rounded-2xl p-5 shadow-xl">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-2.5">
+          <span class="text-xl">📋</span>
+          <div>
+            <h3 class="font-extrabold text-sm text-white">MASTER RIWAYAT SEMUA ORDER</h3>
+            <p class="text-[11px] text-slate-400">Arsip panggilan montir darurat, biaya admin Rp 10.000, dan pembayaran jasa QRIS</p>
+          </div>
+        </div>
+        <span class="text-xs bg-slate-700 text-slate-300 font-bold px-3 py-1 rounded-full">
+          ${state.orderHistory ? state.orderHistory.length : 3} Riwayat Tersimpan
+        </span>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs border-collapse">
+          <thead>
+            <tr class="border-b border-slate-700 text-slate-400 font-bold text-[11px] uppercase">
+              <th class="py-2.5 px-3">ID Order</th>
+              <th class="py-2.5 px-3">Waktu</th>
+              <th class="py-2.5 px-3">Kendaraan & Pengemudi</th>
+              <th class="py-2.5 px-3">Kendala / Kerusakan</th>
+              <th class="py-2.5 px-3">Mitra Montir</th>
+              <th class="py-2.5 px-3 text-right">Admin Owner</th>
+              <th class="py-2.5 px-3 text-right">Jasa Montir</th>
+              <th class="py-2.5 px-3 text-center">Status</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-700/50">
+            ${(state.orderHistory || []).map(o => `
+              <tr class="hover:bg-slate-700/30 transition">
+                <td class="py-3 px-3 font-mono font-bold text-amber-400">#${o.id}</td>
+                <td class="py-3 px-3 text-slate-300">${o.date}</td>
+                <td class="py-3 px-3 font-bold text-white">${o.driver}</td>
+                <td class="py-3 px-3 text-slate-300">${o.damage}</td>
+                <td class="py-3 px-3 text-slate-300">${o.mechanic}</td>
+                <td class="py-3 px-3 text-right font-black text-emerald-400">Rp ${Number(o.adminFee).toLocaleString('id-ID')}</td>
+                <td class="py-3 px-3 text-right font-bold text-sky-400">Rp ${Number(o.mechanicBill).toLocaleString('id-ID')}</td>
+                <td class="py-3 px-3 text-center">
+                  <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                    ${o.status}
+                  </span>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div>
 
   <script>
     const ws = new WebSocket('ws://' + window.location.host);
     ws.onmessage = () => location.reload();
+
+    function handleSweepCash() {
+      const pin = prompt('Masukkan 4 Digit PIN Keamanan Owner untuk Menarik Seluruh Kas:');
+      if (!pin) return;
+      if (pin !== '1234') {
+        alert('PIN Keamanan Salah! Akses ditolak.');
+        return;
+      }
+      fetch('/api/petty-cash/sweep', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin: pin })
+      })
+      .then(r => r.json())
+      .then(d => {
+        if (d.success) {
+          alert('Berhasil! Seluruh kas sebesar Rp ' + Number(d.amountWithdrawn).toLocaleString('id-ID') + ' telah ditarik ke rekening Owner.');
+          location.reload();
+        } else {
+          alert(d.error || 'Gagal menarik kas');
+        }
+      })
+      .catch(() => alert('Terjadi kesalahan jaringan'));
+    }
   </script>
 </body>
 </html>

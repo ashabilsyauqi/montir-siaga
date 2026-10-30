@@ -89,6 +89,39 @@ export const EMERGENCY_SERVICES = [
   },
 ];
 
+export const INITIAL_ORDER_HISTORY = [
+  {
+    id: 'MS-8921',
+    date: 'Hari ini, 14:20',
+    driver: 'Toyota Avanza (B 1234 SKA)',
+    damage: 'Aki soak tidak bisa starter',
+    mechanic: 'Pak Agus Santoso',
+    adminFee: 10000,
+    mechanicBill: 85000,
+    status: 'SELESAI (LUNAS)',
+  },
+  {
+    id: 'MS-8919',
+    date: 'Hari ini, 11:05',
+    driver: 'Toyota Innova (B 8821 KLO)',
+    damage: 'Ban bocor kena paku',
+    mechanic: 'Bambang Irawan',
+    adminFee: 10000,
+    mechanicBill: 65000,
+    status: 'SELESAI (LUNAS)',
+  },
+  {
+    id: 'MS-8915',
+    date: 'Kemarin, 21:40',
+    driver: 'Mitsubishi Xpander (B 4410 ZAQ)',
+    damage: 'Mesin overheat di jalan tol',
+    mechanic: 'Pak Agus Santoso',
+    adminFee: 10000,
+    mechanicBill: 120000,
+    status: 'SELESAI (LUNAS)',
+  },
+];
+
 export function AppProvider({ children }) {
   const [currentRole, setCurrentRole] = useState(null);
   const [roleLoaded, setRoleLoaded] = useState(false);
@@ -102,6 +135,7 @@ export function AppProvider({ children }) {
 
   // Shared state synchronized across devices
   const [activeOrder, setActiveOrder] = useState(null);
+  const [orderHistory, setOrderHistory] = useState(INITIAL_ORDER_HISTORY);
   const [mechanics, setMechanics] = useState(INITIAL_MECHANICS);
   const [mechanicOnline, setMechanicOnline] = useState(true);
   const [platformStats, setPlatformStats] = useState({
@@ -166,6 +200,7 @@ export function AppProvider({ children }) {
             const message = JSON.parse(event.data);
             if (message.state) {
               if (message.state.activeOrder !== undefined) setActiveOrder(message.state.activeOrder);
+              if (message.state.orderHistory) setOrderHistory(message.state.orderHistory);
               if (message.state.mechanics) setMechanics(message.state.mechanics);
               if (message.state.mechanicOnline !== undefined) setMechanicOnline(message.state.mechanicOnline);
               if (message.state.platformStats) setPlatformStats(message.state.platformStats);
@@ -220,7 +255,7 @@ export function AppProvider({ children }) {
       const fallbackOrder = {
         id: 'MS-' + Math.floor(1000 + Math.random() * 9000),
         service,
-        userAddress: locationText || 'Jl. Jend. Sudirman Kav 52',
+        userAddress: locationText || 'Jl. Sudirman No. 45, Jakarta Selatan',
         userCoords: coords || { latitude: -6.2225, longitude: 106.8115 },
         vehicle: vehicleName,
         note: note || '',
@@ -231,7 +266,7 @@ export function AppProvider({ children }) {
         paymentMethod: 'montirpay',
         mechanicEstimatedFee: service.price,
         mechanicBillAmount: service.price,
-        mechanicBillNote: 'Jasa perbaikan standar darurat',
+        mechanicBillNote: 'Jasa perbaikan darurat',
         qrisGenerated: false,
         qrisPaid: false,
         createdAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -316,11 +351,26 @@ export function AppProvider({ children }) {
     } catch (e) {
       if (activeOrder) {
         const amount = activeOrder.mechanicBillAmount || activeOrder.mechanicEstimatedFee;
-        setActiveOrder({
+        const finishedOrder = {
           ...activeOrder,
           qrisPaid: true,
           status: 'completed',
-        });
+        };
+        setActiveOrder(finishedOrder);
+
+        // Record in order history
+        const newHistory = {
+          id: activeOrder.id,
+          date: 'Baru Saja',
+          driver: activeOrder.vehicle || 'Pengemudi Mobil',
+          damage: activeOrder.note || activeOrder.service?.title || 'Perbaikan Darurat',
+          mechanic: activeOrder.mechanic?.name || 'Pak Agus Santoso',
+          adminFee: 10000,
+          mechanicBill: amount,
+          status: 'SELESAI (LUNAS)',
+        };
+        setOrderHistory((prev) => [newHistory, ...prev]);
+
         // Update local mechanic balance
         setMechanics((prev) =>
           prev.map((m) =>
@@ -330,6 +380,33 @@ export function AppProvider({ children }) {
           )
         );
       }
+    }
+  };
+
+  const sweepPettyCash = async (pin) => {
+    if (pin !== '1234') {
+      return { success: false, error: 'PIN Keamanan Salah! Akses ditolak.' };
+    }
+    const amount = platformStats.platformNetRevenue || 0;
+    if (amount <= 0) {
+      return { success: false, error: 'Saldo kas saat ini Rp 0. Tidak ada dana yang bisa ditarik.' };
+    }
+    try {
+      const res = await fetch(`${API_URL}/api/petty-cash/sweep`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setPlatformStats((prev) => ({ ...prev, platformNetRevenue: 0 }));
+        return { success: true, amountWithdrawn: data.amountWithdrawn };
+      } else {
+        return { success: false, error: data.error };
+      }
+    } catch (e) {
+      setPlatformStats((prev) => ({ ...prev, platformNetRevenue: 0 }));
+      return { success: true, amountWithdrawn: amount };
     }
   };
 
@@ -394,6 +471,7 @@ export function AppProvider({ children }) {
         driverWallet,
         topUpDriverWallet,
         activeOrder,
+        orderHistory,
         mechanics,
         mechanicOnline,
         setMechanicOnline: toggleMechanicOnline,
@@ -404,6 +482,7 @@ export function AppProvider({ children }) {
         updateOrderStatus,
         generateMechanicBill,
         payQrisBill,
+        sweepPettyCash,
         cancelOrder,
         resetOrder,
         addChatMessage,
