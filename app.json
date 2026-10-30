@@ -22,12 +22,7 @@
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION"
-      ],
-      "config": {
-        "googleMaps": {
-          "apiKey": "AIzaSy_GANTI_DENGAN_GOOGLE_MAPS_KEY_ANDA"
-        }
-      }
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"

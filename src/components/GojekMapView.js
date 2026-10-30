@@ -1,25 +1,22 @@
-import React, { useRef, useEffect } from 'react';
-import { StyleSheet, View, TouchableOpacity, Text } from 'react-native';
+import React, { useRef } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { WebView } from 'react-native-webview';
-import Ionicons from '@expo/vector-icons/Ionicons';
 
 export default function GojekMapView({
   userCoords = { latitude: -6.2255, longitude: 106.8120 },
   mechanics = [],
   assignedMechanic = null,
-  orderStatus = 'idle', // 'idle' | 'searching' | 'assigned' | 'arrived' | 'repairing' | 'billing' | 'completed'
+  orderStatus = 'idle',
   showRadar = false,
+  showRoute = true,
   height = '100%',
-  googleMapsApiKey = '',
 }) {
   const webViewRef = useRef(null);
 
   const lat = userCoords?.latitude || -6.2255;
   const lng = userCoords?.longitude || 106.8120;
 
-  // Generate HTML for Leaflet + Google Maps styled vector tiles
-  const mapHtml = `
-<!DOCTYPE html>
+  const mapHtml = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8" />
@@ -28,46 +25,76 @@ export default function GojekMapView({
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body, #map { width: 100%; height: 100%; overflow: hidden; background: #e5e7eb; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    html, body, #map { width: 100%; height: 100%; overflow: hidden; background: #eef2f6; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
 
-    /* Custom Leaflet Pin Styling */
-    .pin-container { position: relative; width: 44px; height: 44px; }
-    
-    /* Driver Car Pin */
-    .driver-pin {
-      width: 44px;
-      height: 44px;
-      background: linear-gradient(135deg, #DC2626 0%, #991B1B 100%);
-      border: 3px solid #FFFFFF;
+    /* Crisp & Pastel map filter to look identical to Gojek Google Maps skin */
+    .leaflet-tile {
+      filter: saturate(112%) contrast(101%) brightness(101%);
+    }
+
+    .pin-container { position: relative; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; }
+
+    /* Gojek Green Origin Pin (with Arrow Up like user image) */
+    .gojek-origin-pin {
+      width: 40px;
+      height: 40px;
+      background: #00AA13;
+      border: 3.5px solid #FFFFFF;
       border-radius: 50%;
-      box-shadow: 0 4px 14px rgba(220, 38, 38, 0.5);
+      box-shadow: 0 4px 14px rgba(0, 170, 19, 0.45);
       display: flex;
       align-items: center;
       justify-content: center;
-      color: white;
-      font-size: 20px;
-      z-index: 500;
-      position: relative;
-    }
-
-    .driver-tag {
-      position: absolute;
-      bottom: -22px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #1E293B;
       color: #FFFFFF;
-      font-size: 10px;
-      font-weight: 800;
-      padding: 3px 8px;
-      border-radius: 10px;
-      white-space: nowrap;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-      border: 1px solid rgba(255,255,255,0.2);
-      letter-spacing: 0.3px;
+      font-size: 20px;
+      font-weight: 900;
+      position: relative;
+      z-index: 500;
     }
 
-    /* Radar Pulse Rings ala Gojek */
+    .gojek-origin-halo {
+      position: absolute;
+      top: -16px;
+      left: -16px;
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: rgba(0, 170, 19, 0.22);
+      pointer-events: none;
+      z-index: 100;
+      animation: halo-breathe 2.4s infinite ease-in-out;
+    }
+
+    @keyframes halo-breathe {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      50% { transform: scale(1.15); opacity: 0.35; }
+      100% { transform: scale(0.95); opacity: 0.8; }
+    }
+
+    /* Gojek Orange Destination Pin */
+    .gojek-dest-pin {
+      width: 36px;
+      height: 36px;
+      background: #FA541C;
+      border: 3px solid #FFFFFF;
+      border-radius: 50%;
+      box-shadow: 0 4px 12px rgba(250, 84, 28, 0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      z-index: 500;
+    }
+
+    .gojek-dest-inner-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 2.5px solid #FFFFFF;
+      background: #FA541C;
+    }
+
+    /* Radar Pulse Rings for Searching State */
     .radar-wrapper {
       position: absolute;
       top: 50%;
@@ -85,8 +112,8 @@ export default function GojekMapView({
       width: 180px;
       height: 180px;
       border-radius: 50%;
-      border: 2px solid rgba(220, 38, 38, 0.7);
-      background: radial-gradient(circle, rgba(220, 38, 38, 0.25) 0%, rgba(220, 38, 38, 0.05) 70%, transparent 100%);
+      border: 2px solid rgba(0, 170, 19, 0.7);
+      background: radial-gradient(circle, rgba(0, 170, 19, 0.25) 0%, rgba(0, 170, 19, 0.05) 70%, transparent 100%);
       animation: radar-pulse 2.2s infinite ease-out;
       transform-origin: center center;
     }
@@ -96,51 +123,48 @@ export default function GojekMapView({
 
     @keyframes radar-pulse {
       0% { transform: scale(0.2); opacity: 0.9; }
-      100% { transform: scale(3.2); opacity: 0; }
+      100% { transform: scale(3.4); opacity: 0; }
     }
 
-    /* Mechanic Motorcycle Pin */
     .mechanic-pin {
-      width: 38px;
-      height: 38px;
-      background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
-      border: 2.5px solid #FFFFFF;
+      width: 36px;
+      height: 36px;
+      background: #FFFFFF;
+      border: 2.5px solid #00AA13;
       border-radius: 50%;
-      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.4);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
       display: flex;
       align-items: center;
       justify-content: center;
-      color: #FACC15;
-      font-size: 18px;
+      font-size: 17px;
       position: relative;
       z-index: 450;
       transition: transform 0.3s ease;
     }
 
     .mechanic-pin.active {
-      background: linear-gradient(135deg, #16A34A 0%, #15803D 100%);
+      background: #00AA13;
+      border-color: #FFFFFF;
       color: #FFFFFF;
-      box-shadow: 0 4px 16px rgba(22, 163, 74, 0.6);
+      box-shadow: 0 4px 16px rgba(0, 170, 19, 0.6);
       transform: scale(1.15);
     }
 
     .mechanic-tag {
       position: absolute;
-      bottom: -20px;
+      bottom: -18px;
       left: 50%;
       transform: translateX(-50%);
-      background: #FFFFFF;
-      color: #0F172A;
-      font-size: 9.5px;
+      background: #1E293B;
+      color: #FFFFFF;
+      font-size: 9px;
       font-weight: 800;
-      padding: 2px 7px;
-      border-radius: 8px;
+      padding: 2px 6px;
+      border-radius: 6px;
       white-space: nowrap;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-      border: 1px solid #CBD5E1;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.25);
     }
 
-    /* Recenter Button */
     .map-recenter-btn {
       position: absolute;
       right: 16px;
@@ -149,7 +173,7 @@ export default function GojekMapView({
       height: 44px;
       background: #FFFFFF;
       border-radius: 50%;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      box-shadow: 0 4px 14px rgba(0,0,0,0.18);
       border: 1px solid #E2E8F0;
       display: flex;
       align-items: center;
@@ -157,12 +181,6 @@ export default function GojekMapView({
       z-index: 1000;
       cursor: pointer;
       font-size: 20px;
-      color: #DC2626;
-    }
-
-    /* Clean Map Tile filter to look crisp & seamless ala Gojek */
-    .leaflet-tile {
-      filter: contrast(104%) brightness(101%);
     }
   </style>
 </head>
@@ -171,129 +189,121 @@ export default function GojekMapView({
   <div class="map-recenter-btn" onclick="recenterMap()">🎯</div>
 
   <script>
-    const userLat = ${lat};
-    const userLng = ${lng};
-    const isSearching = ${showRadar || orderStatus === 'searching'};
-    const hasAssigned = ${!!assignedMechanic || ['assigned', 'arrived', 'repairing'].includes(orderStatus)};
+    var userLat = ${lat};
+    var userLng = ${lng};
+    var isSearching = ${showRadar || orderStatus === 'searching'};
+    var hasAssigned = ${!!assignedMechanic || ['assigned', 'arrived', 'repairing'].includes(orderStatus)};
     
-    // Default mechanics coordinates
-    const mechanicsList = ${JSON.stringify(
+    var mechanicsList = ${JSON.stringify(
       mechanics.length > 0
         ? mechanics
         : [
-            { id: 'm1', name: 'Pak Agus (3 mnt)', coords: { latitude: lat + 0.0035, longitude: lng + 0.0042 } },
-            { id: 'm2', name: 'Bambang (5 mnt)', coords: { latitude: lat - 0.0048, longitude: lng - 0.0031 } },
-            { id: 'm3', name: 'Dedi (7 mnt)', coords: { latitude: lat + 0.0055, longitude: lng - 0.0045 } },
+            { id: 'm1', name: 'Pak Agus (1.2 km)', coords: { latitude: lat + 0.0038, longitude: lng + 0.0045 } },
+            { id: 'm2', name: 'Bambang (2.1 km)', coords: { latitude: lat - 0.0042, longitude: lng - 0.0035 } },
+            { id: 'm3', name: 'Dedi (2.8 km)', coords: { latitude: lat + 0.0051, longitude: lng - 0.0042 } },
           ]
     )};
 
-    // Initialize Leaflet Map
-    const map = L.map('map', {
+    var map = L.map('map', {
       zoomControl: false,
       attributionControl: false,
-    }).setView([userLat, userLng], isSearching ? 15 : 16);
+    }).setView([userLat, userLng], isSearching ? 15 : 15);
 
-    // Google Maps / CartoDB Voyager Tile Layer (Looks identical to Gojek's Google Maps skin)
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    // 100% Free & Open-Source OpenStreetMap Humanitarian (HOT)
+    var hotTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
       maxZoom: 19,
-      subdomains: 'abcd',
-    }).addTo(map);
+      subdomains: 'abc',
+    });
 
-    // Driver Marker with Car Icon & Radar
-    const radarHtml = isSearching ? \`
-      <div class="radar-wrapper">
-        <div class="radar-ring"></div>
-        <div class="radar-ring"></div>
-        <div class="radar-ring"></div>
-      </div>
-    \` : '';
+    var osmStandardLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+    });
 
-    const driverIcon = L.divIcon({
+    hotTileLayer.on('tileerror', function() {
+      if (!map.hasLayer(osmStandardLayer)) {
+        osmStandardLayer.addTo(map);
+      }
+    });
+
+    hotTileLayer.addTo(map);
+
+    var radarHtml = isSearching 
+      ? '<div class="radar-wrapper"><div class="radar-ring"></div><div class="radar-ring"></div><div class="radar-ring"></div></div>'
+      : '';
+
+    var driverIcon = L.divIcon({
       className: 'custom-driver-icon',
-      html: \`
-        <div class="pin-container">
-          \${radarHtml}
-          <div class="driver-pin">
-            🚗
-            <div class="driver-tag">MOBIL ANDA</div>
-          </div>
-        </div>
-      \`,
+      html: '<div class="pin-container"><div class="gojek-origin-halo"></div>' + radarHtml + '<div class="gojek-origin-pin">↑</div></div>',
       iconSize: [44, 44],
       iconAnchor: [22, 22],
     });
 
-    const driverMarker = L.marker([userLat, userLng], { icon: driverIcon, zIndexOffset: 1000 }).addTo(map);
+    var driverMarker = L.marker([userLat, userLng], { icon: driverIcon, zIndexOffset: 1000 }).addTo(map);
 
-    // Add Mechanics
-    const mechMarkers = [];
-    mechanicsList.forEach(m => {
-      const isThisAssigned = ${assignedMechanic ? JSON.stringify(assignedMechanic.id) : 'null'} === m.id || hasAssigned;
-      const mIcon = L.divIcon({
+    var destCoords = [userLat + 0.0038, userLng + 0.0045];
+    var destIcon = L.divIcon({
+      className: 'custom-dest-icon',
+      html: '<div class="pin-container"><div class="gojek-dest-pin"><div class="gojek-dest-inner-dot"></div></div></div>',
+      iconSize: [36, 36],
+      iconAnchor: [18, 18],
+    });
+
+    var destMarker = L.marker(destCoords, { icon: destIcon, zIndexOffset: 900 }).addTo(map);
+
+    var midLat = (userLat + destCoords[0]) / 2;
+    var midLng = (userLng + destCoords[1]) / 2;
+
+    var routePoints = [
+      [userLat, userLng],
+      [userLat + 0.0012, userLng + 0.0006],
+      [midLat, userLng + 0.0022],
+      [midLat + 0.0010, destCoords[1] - 0.0015],
+      [destCoords[0], destCoords[1]]
+    ];
+
+    var routeLine = L.polyline(routePoints, {
+      color: '#00AA13',
+      weight: 5,
+      opacity: 0.95,
+      lineCap: 'round',
+      lineJoin: 'round',
+    }).addTo(map);
+
+    var mechMarkers = [];
+    mechanicsList.forEach(function(m) {
+      var isThisAssigned = (${assignedMechanic ? JSON.stringify(assignedMechanic.id) : 'null'} === m.id) || hasAssigned;
+      var mIcon = L.divIcon({
         className: 'custom-mech-icon',
-        html: \`
-          <div class="mechanic-pin \${isThisAssigned ? 'active' : ''}">
-            🛵
-            <div class="mechanic-tag">\${m.name || 'Montir Siaga'}</div>
-          </div>
-        \`,
-        iconSize: [38, 38],
-        iconAnchor: [19, 19],
+        html: '<div class="mechanic-pin' + (isThisAssigned ? ' active' : '') + '">🛵<div class="mechanic-tag">' + (m.name || 'Montir Siaga') + '</div></div>',
+        iconSize: [36, 36],
+        iconAnchor: [18, 18],
       });
 
-      const mMarker = L.marker([m.coords.latitude, m.coords.longitude], { icon: mIcon }).addTo(map);
+      var mMarker = L.marker([m.coords.latitude, m.coords.longitude], { icon: mIcon }).addTo(map);
       mechMarkers.push({ id: m.id, marker: mMarker, coords: m.coords });
     });
 
-    // If Assigned: Draw Route Polyline from Mechanic to Driver & Animate!
     if (hasAssigned) {
-      const targetMech = mechMarkers[0];
+      var targetMech = mechMarkers[0];
       if (targetMech) {
-        // Waypoints along streets
-        const midLat = (userLat + targetMech.coords.latitude) / 2;
-        const midLng = (userLng + targetMech.coords.longitude) / 2;
-        
-        const routePoints = [
-          [targetMech.coords.latitude, targetMech.coords.longitude],
-          [midLat + 0.001, targetMech.coords.longitude],
-          [midLat, midLng],
-          [userLat, midLng],
-          [userLat, userLng]
-        ];
-
-        // Draw animated route line
-        const polyline = L.polyline(routePoints, {
-          color: '#DC2626',
-          weight: 6,
-          opacity: 0.85,
-          dashArray: '8, 8',
-          lineJoin: 'round'
-        }).addTo(map);
-
-        // Fit bounds to show both mechanic and driver
-        map.fitBounds(L.latLngBounds(routePoints), { padding: [50, 50] });
-
-        // Simulate mechanic driving along the line towards driver
-        let step = 0;
-        const totalSteps = routePoints.length;
-        const interval = setInterval(() => {
-          if (step < totalSteps) {
+        var step = routePoints.length - 1;
+        var interval = setInterval(function() {
+          if (step >= 0) {
             targetMech.marker.setLatLng(routePoints[step]);
-            step++;
+            step--;
           } else {
             clearInterval(interval);
           }
-        }, 3000);
+        }, 2500);
       }
     }
 
-    function recenterMap() {
-      map.setView([userLat, userLng], 16, { animate: true });
-    }
+    window.recenterMap = function() {
+      map.setView([userLat, userLng], 15, { animate: true });
+    };
   </script>
 </body>
-</html>
-`;
+</html>`;
 
   return (
     <View style={[styles.container, { height }]}>
@@ -315,10 +325,10 @@ const styles = StyleSheet.create({
   container: {
     width: '100%',
     position: 'relative',
-    backgroundColor: '#E2E8F0',
+    backgroundColor: '#EEF2F6',
   },
   webView: {
     flex: 1,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: '#EEF2F6',
   },
 });
