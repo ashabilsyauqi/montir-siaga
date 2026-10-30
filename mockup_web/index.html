@@ -2,796 +2,814 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Montir Siaga - Bantuan Darurat Mobil Mogok</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Montir Siaga — PC Smartphone Emulator & Simulator</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
-    @keyframes pulseRadar {
-      0% { transform: scale(0.6); opacity: 0.9; }
-      100% { transform: scale(2.4); opacity: 0; }
+    /* Phone Shell Styling */
+    .phone-bezel {
+      width: 412px;
+      height: 846px;
+      border-radius: 50px;
+      box-shadow: 
+        0 0 0 12px #0f172a,
+        0 0 0 14px #334155,
+        0 25px 60px -15px rgba(0, 0, 0, 0.6);
+      position: relative;
+      background: #ffffff;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      transition: transform 0.2s ease;
     }
-    .radar-wave {
-      animation: pulseRadar 2s cubic-bezier(0.2, 0.8, 0.4, 1) infinite;
+
+    /* Dynamic Island */
+    .dynamic-island {
+      width: 110px;
+      height: 26px;
+      background: #000000;
+      border-radius: 20px;
+      position: absolute;
+      top: 11px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding-right: 12px;
     }
-    .radar-wave-delay {
-      animation: pulseRadar 2s cubic-bezier(0.2, 0.8, 0.4, 1) 0.7s infinite;
+    .camera-lens {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #111827;
+      border: 1.5px solid #1f2937;
     }
-    .no-scrollbar::-webkit-scrollbar {
-      display: none;
+
+    /* Leaflet clean styling */
+    .leaflet-tile {
+      filter: saturate(112%) contrast(101%) brightness(101%);
     }
-    .no-scrollbar {
-      -ms-overflow-style: none;
-      scrollbar-width: none;
+
+    /* Radar Waves */
+    @keyframes radarPulse {
+      0% { transform: scale(0.2); opacity: 0.9; }
+      100% { transform: scale(3.4); opacity: 0; }
     }
-    .phone-container {
-      max-width: 412px;
-      height: 844px;
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35), 0 0 0 12px #1f2937, 0 0 0 14px #374151;
+    .radar-ring {
+      position: absolute;
+      top: -90px;
+      left: -90px;
+      width: 180px;
+      height: 180px;
+      border-radius: 50%;
+      border: 2px solid rgba(0, 170, 19, 0.7);
+      background: radial-gradient(circle, rgba(0, 170, 19, 0.25) 0%, rgba(0, 170, 19, 0.05) 70%, transparent 100%);
+      animation: radarPulse 2.2s infinite ease-out;
+      transform-origin: center center;
     }
-    @media (max-width: 640px) {
-      .phone-container {
-        max-width: 100vw;
-        height: 100vh;
-        border-radius: 0 !important;
-        box-shadow: none !important;
-      }
-    }
+    .radar-ring:nth-child(2) { animation-delay: 0.7s; }
+    .radar-ring:nth-child(3) { animation-delay: 1.4s; }
+
+    /* Custom Scrollbar */
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   </style>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen flex items-center justify-center p-0 sm:p-6 font-sans select-none antialiased">
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans select-none overflow-x-hidden">
 
-  <!-- Mobile Device Shell -->
-  <div class="phone-container w-full bg-slate-950 rounded-[44px] overflow-hidden flex flex-col relative border border-slate-800">
-    
-    <!-- Status Bar (iOS style) -->
-    <div class="h-11 px-7 flex items-center justify-between text-xs font-semibold text-slate-300 z-50 bg-slate-900/90 backdrop-blur-md shrink-0">
-      <span id="liveTime">09:41</span>
-      <div class="w-24 h-4 bg-black rounded-full mx-auto -mt-1 hidden sm:block"></div>
-      <div class="flex items-center space-x-2">
-        <i class="fa-solid fa-signal text-[10px]"></i>
-        <i class="fa-solid fa-wifi text-[10px]"></i>
-        <i class="fa-solid fa-battery-full text-xs text-emerald-400"></i>
+  <!-- TOP PC CONTROLLER BAR -->
+  <header class="bg-slate-900 border-b border-slate-800 px-6 py-3.5 flex flex-wrap items-center justify-between gap-4 z-50 shrink-0">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-red-600 flex items-center justify-center text-white text-xl shadow-lg shadow-red-600/30">
+        🚗
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="text-base font-extrabold tracking-wide text-white">MONTIR SIAGA — SMARTPHONE EMULATOR</h1>
+          <span class="bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-[10px] px-2 py-0.5 rounded-full font-bold flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            LIVE WS 4000
+          </span>
+        </div>
+        <p class="text-xs text-slate-400">Test langsung tampilan mobile & radar map di PC tanpa perlu buka HP</p>
       </div>
     </div>
 
-    <!-- MAIN SCREEN VIEWPORT -->
-    <div id="appViewport" class="flex-1 overflow-y-auto no-scrollbar relative flex flex-col">
+    <!-- Mode Switcher Buttons -->
+    <div class="flex items-center gap-2 bg-slate-800/90 p-1.5 rounded-2xl border border-slate-700">
+      <button onclick="setMode('driver')" id="btnModeDriver" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 bg-red-600 text-white shadow">
+        🚗 HP Driver (Gojek)
+      </button>
+      <button onclick="setMode('mechanic')" id="btnModeMech" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 text-slate-400 hover:text-white">
+        🔧 HP Montir
+      </button>
+      <button onclick="setMode('dual')" id="btnModeDual" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 text-slate-400 hover:text-white">
+        📲 Dual HP (Berdampingan)
+      </button>
+      <a href="http://localhost:4000" target="_blank" class="px-3.5 py-1.5 rounded-xl text-xs font-bold text-amber-400 hover:text-amber-300 transition flex items-center gap-1.5">
+        👑 Owner Center ↗
+      </a>
+    </div>
 
-      <!-- ================= SCREEN 1: BERANDA & EMERGENCY SELECTION ================= -->
-      <div id="screenHome" class="flex-1 flex flex-col">
-        <!-- Top App Bar -->
-        <div class="bg-gradient-to-r from-red-600 to-amber-600 px-5 pt-3 pb-5 text-white shadow-lg shrink-0">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center space-x-2">
-              <div class="w-9 h-9 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center font-bold text-lg text-white shadow">
-                <i class="fa-solid fa-wrench"></i>
+    <!-- Zoom Scale -->
+    <div class="flex items-center gap-1.5 bg-slate-800 p-1 rounded-xl text-xs font-semibold text-slate-300">
+      <span class="px-2 text-[11px] text-slate-400">Zoom:</span>
+      <button onclick="setScale(1)" class="px-2.5 py-1 rounded-lg hover:bg-slate-700 transition" id="scale100">100%</button>
+      <button onclick="setScale(0.85)" class="px-2.5 py-1 rounded-lg hover:bg-slate-700 transition" id="scale85">85%</button>
+      <button onclick="setScale(0.75)" class="px-2.5 py-1 rounded-lg hover:bg-slate-700 transition" id="scale75">75%</button>
+    </div>
+  </header>
+
+  <!-- WORKSPACE EMULATOR CONTAINER -->
+  <main class="flex-1 flex items-center justify-center p-6 gap-10 overflow-auto bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950" id="emulatorCanvas">
+
+    <!-- ================= SMARTPHONE 1: DRIVER / PEMILIK MOBIL (GOJEK AESTHETIC) ================= -->
+    <div class="flex flex-col items-center" id="phoneDriverWrapper">
+      <div class="text-xs font-bold text-slate-400 mb-2 flex items-center gap-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+        SMARTPHONE DRIVER (PEMILIK MOBIL)
+      </div>
+
+      <div class="phone-bezel" id="driverPhoneBezel">
+        <!-- Dynamic Island -->
+        <div class="dynamic-island"><div class="camera-lens"></div></div>
+
+        <!-- Phone Top Status Bar -->
+        <div class="h-10 pt-2 px-7 flex items-center justify-between text-xs font-bold text-slate-900 bg-white z-40 select-none">
+          <span id="clockDriver">14:55</span>
+          <div class="flex items-center gap-1.5 text-[11px]">
+            <i class="fa-solid fa-signal"></i>
+            <i class="fa-solid fa-wifi"></i>
+            <i class="fa-solid fa-battery-full text-emerald-600 text-sm"></i>
+          </div>
+        </div>
+
+        <!-- Driver Viewport -->
+        <div class="flex-1 flex flex-col relative overflow-hidden bg-white" id="driverViewport">
+          
+          <!-- MAP AREA (Dominant Background) -->
+          <div class="relative w-full" style="height: 48%;">
+            <div id="driverMap" class="w-full h-full"></div>
+
+            <!-- Floating Gojek Address Card -->
+            <div class="absolute top-3.5 left-3.5 right-3.5 bg-white rounded-2xl p-3 shadow-lg border border-slate-100 flex items-center justify-between z-[400]">
+              <div class="flex-1 pr-2">
+                <div class="flex items-center gap-2.5">
+                  <span class="w-2.5 h-2.5 rounded-full bg-[#00AA13] shrink-0"></span>
+                  <span class="text-xs font-bold text-slate-800 truncate" id="driverAddressText">Lokasi Mobil Mogok (Jl. Sudirman No. 45)</span>
+                </div>
+                <div class="h-[1px] bg-slate-200 my-1.5 ml-5"></div>
+                <div class="flex items-center gap-2.5">
+                  <span class="w-2.5 h-2.5 rounded-full bg-[#FA541C] shrink-0"></span>
+                  <span class="text-xs font-bold text-slate-800 truncate">Montir Terdekat (Pak Agus - 1.2 km)</span>
+                </div>
+              </div>
+              <button onclick="changeDriverAddress()" class="border-1.5 border-[#00AA13] text-[#00AA13] px-3.5 py-1 rounded-full text-xs font-extrabold hover:bg-emerald-50 transition">
+                Edit
+              </button>
+            </div>
+
+            <!-- Floating Back & Recenter Buttons -->
+            <button onclick="recenterDriverMap()" class="absolute bottom-5 left-4 w-10 h-10 rounded-full bg-white shadow-md border border-slate-100 flex items-center justify-center text-slate-700 z-[400] hover:bg-slate-50">
+              <i class="fa-solid fa-arrow-left text-sm"></i>
+            </button>
+            <button onclick="recenterDriverMap()" class="absolute bottom-5 right-4 w-10 h-10 rounded-full bg-white shadow-md border border-slate-100 flex items-center justify-center text-[#00AA13] z-[400] hover:bg-slate-50">
+              <i class="fa-solid fa-crosshairs text-base"></i>
+            </button>
+          </div>
+
+          <!-- GOJEK BOTTOM SHEET -->
+          <div class="flex-1 bg-white rounded-t-[26px] -mt-5 shadow-2xl border-t border-slate-100 flex flex-col z-[450] relative overflow-hidden">
+            <!-- Drag Handle -->
+            <div class="w-9 h-1 bg-slate-300 rounded-full mx-auto mt-2.5 mb-2 shrink-0"></div>
+
+            <!-- Scrollable Tier List -->
+            <div class="flex-1 overflow-y-auto no-scrollbar px-4 pb-24 space-y-2" id="tierListContainer">
+              
+              <!-- Tier 1: GoRide -->
+              <div onclick="selectTier('goride', 'GoRide', 20000, 25000)" id="tier-goride" class="tier-card p-3 rounded-2xl flex items-center justify-between cursor-pointer border-1.5 bg-[#F0FDF4] border-[#86EFAC] transition">
+                <div class="flex items-center gap-3">
+                  <div class="w-11 h-11 rounded-xl bg-emerald-100 flex items-center justify-center text-xl text-[#00AA13]">
+                    🛵
+                  </div>
+                  <div>
+                    <div class="text-sm font-extrabold text-slate-900">GoRide</div>
+                    <div class="text-[11px] text-slate-500 font-medium">15 mins • 👤 1 Montir</div>
+                    <div class="text-[10px] text-emerald-700 font-semibold">Montir Motor Express (Bawa Tool Lengkap)</div>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="flex items-center gap-1.5 justify-end">
+                    <span class="w-2 h-2 rounded-full bg-[#FA541C]"></span>
+                    <span class="text-sm font-extrabold text-slate-900">Rp20.000</span>
+                  </div>
+                  <div class="text-[11px] text-slate-400 line-through">Rp25.000</div>
+                </div>
+              </div>
+
+              <!-- Tier 2: GoCar -->
+              <div onclick="selectTier('gocar', 'GoCar', 70000, 125000)" id="tier-gocar" class="tier-card p-3 rounded-2xl flex items-center justify-between cursor-pointer border-1.5 border-transparent hover:bg-slate-50 transition">
+                <div class="flex items-center gap-3">
+                  <div class="w-11 h-11 rounded-xl bg-slate-100 flex items-center justify-center text-xl text-slate-700">
+                    🚗
+                  </div>
+                  <div>
+                    <div class="text-sm font-extrabold text-slate-900">GoCar</div>
+                    <div class="text-[11px] text-slate-500 font-medium">30 mins • 👥 2 Montir</div>
+                    <div class="text-[10px] text-slate-400">Mobil Derek & Bengkel Lengkap</div>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="flex items-center gap-1.5 justify-end">
+                    <span class="w-2 h-2 rounded-full bg-[#FA541C]"></span>
+                    <span class="text-sm font-extrabold text-slate-900">Rp70.000</span>
+                  </div>
+                  <div class="text-[11px] text-slate-400 line-through">Rp125.000</div>
+                </div>
+              </div>
+
+              <!-- Tier 3: GoBluebird -->
+              <div onclick="selectTier('gobluebird', 'GoBluebird', 45000, 60000)" id="tier-gobluebird" class="tier-card p-3 rounded-2xl flex items-center justify-between cursor-pointer border-1.5 border-transparent hover:bg-slate-50 transition">
+                <div class="flex items-center gap-3">
+                  <div class="w-11 h-11 rounded-xl bg-sky-50 flex items-center justify-center text-xl text-sky-600">
+                    🚙
+                  </div>
+                  <div>
+                    <div class="text-sm font-extrabold text-slate-900">GoBluebird</div>
+                    <div class="text-[11px] text-slate-500 font-medium">20 mins • 👤 1-2 Montir</div>
+                    <div class="text-[10px] text-slate-400">Bengkel Darurat Siaga 24 Jam</div>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="flex items-center gap-1.5 justify-end">
+                    <span class="w-2 h-2 rounded-full bg-[#FA541C]"></span>
+                    <span class="text-sm font-extrabold text-slate-900">Rp45.000</span>
+                  </div>
+                  <div class="text-[11px] text-slate-400 line-through">Rp60.000</div>
+                </div>
+              </div>
+
+              <!-- Note Card -->
+              <div class="bg-slate-50 border border-slate-200 rounded-xl p-2.5 flex items-center gap-2">
+                <i class="fa-regular fa-comment-dots text-slate-400 text-sm"></i>
+                <input type="text" id="driverNoteInput" placeholder="Catatan kendala (Avanza mogok, aki mati...)" class="bg-transparent text-xs text-slate-800 placeholder-slate-400 flex-1 outline-none font-medium" />
+              </div>
+            </div>
+
+            <!-- PINNED BOTTOM ACTION BAR -->
+            <div class="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-100 p-4 shadow-xl z-20">
+              <!-- MontirPay Pill Bar -->
+              <div class="flex items-center justify-between mb-3 px-1">
+                <div class="flex items-center gap-2">
+                  <div class="w-5 h-5 rounded-full bg-[#0284C7] flex items-center justify-center text-white text-[10px]">
+                    <i class="fa-solid fa-wallet"></i>
+                  </div>
+                  <span class="text-xs font-extrabold text-slate-900">MontirPay</span>
+                  <span class="text-xs font-bold text-[#0284C7]" id="driverWalletVal">Rp 50.000</span>
+                  <button onclick="topUpDriverWallet(50000)" class="bg-sky-100 text-[#0284C7] text-[10px] font-bold px-2 py-0.5 rounded-full hover:bg-sky-200">
+                    + Top Up
+                  </button>
+                </div>
+                <i class="fa-solid fa-ellipsis text-slate-400 text-sm"></i>
+              </div>
+
+              <!-- Big Green Order Button -->
+              <button onclick="handleDriverOrder()" id="btnBigOrder" class="w-full bg-[#00AA13] hover:bg-[#009210] active:scale-[0.99] text-white py-3.5 px-5 rounded-full flex items-center justify-between shadow-lg shadow-emerald-500/30 transition">
+                <div class="text-left">
+                  <div class="text-sm font-black" id="orderBtnTitle">Order GoRide</div>
+                  <div class="text-[10px] text-emerald-100 font-medium">Biaya Admin Rp10.000 (Owner) • Cashback Rp5.000</div>
+                </div>
+                <div class="w-8 h-8 rounded-full bg-white flex items-center justify-center text-[#00AA13]">
+                  <i class="fa-solid fa-arrow-right text-xs"></i>
+                </div>
+              </button>
+            </div>
+
+            <!-- SEARCHING OVERLAY (ACTIVE DURING SEARCHING) -->
+            <div id="searchingOverlay" class="absolute inset-0 bg-white/95 backdrop-blur-md z-50 flex flex-col items-center justify-center p-6 text-center hidden">
+              <div class="w-20 h-20 rounded-full bg-emerald-50 flex items-center justify-center text-[#00AA13] text-3xl mb-4 relative">
+                <span class="radar-ring"></span>
+                <span class="radar-ring"></span>
+                <i class="fa-solid fa-tower-broadcast animate-pulse"></i>
+              </div>
+              <h3 class="text-base font-extrabold text-slate-900 mb-1">Mencari Montir Terdekat...</h3>
+              <p class="text-xs text-slate-500 mb-4 max-w-xs">Memindai armada montir motor terdekat di radius 3 km dari lokasi mobil Anda.</p>
+              
+              <div class="w-full bg-slate-50 p-3 rounded-xl border border-slate-200 text-left text-xs space-y-1 mb-5">
+                <div class="flex justify-between"><span class="text-slate-500">Layanan:</span><span class="font-bold text-slate-800" id="searchServiceTitle">GoRide</span></div>
+                <div class="flex justify-between"><span class="text-slate-500">Admin Terbayar:</span><span class="font-bold text-emerald-600">Rp 10.000 (Owner)</span></div>
+                <div class="flex justify-between"><span class="text-slate-500">Estimasi Jasa:</span><span class="font-bold text-slate-800" id="searchServicePrice">Rp 20.000</span></div>
+              </div>
+
+              <button onclick="cancelDriverOrder()" class="w-full py-3 bg-red-100 text-red-600 font-bold text-xs rounded-xl hover:bg-red-200 transition">
+                Batalkan Pencarian
+              </button>
+            </div>
+
+            <!-- QRIS PAYMENT POPUP FOR DRIVER -->
+            <div id="qrisModalDriver" class="absolute inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end justify-center hidden">
+              <div class="w-full bg-white rounded-t-3xl p-6 text-center space-y-3">
+                <div class="flex justify-between items-center">
+                  <h3 class="text-sm font-extrabold text-slate-900">Tagihan QRIS Montir</h3>
+                  <button onclick="closeQrisModal()"><i class="fa-solid fa-xmark text-slate-400 text-lg"></i></button>
+                </div>
+
+                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 inline-block">
+                  <i class="fa-solid fa-qrcode text-7xl text-slate-900"></i>
+                  <div class="text-[10px] text-slate-500 font-mono mt-1">NMID: ID1092837465</div>
+                  <div class="text-xs font-bold text-slate-800" id="qrisMechanicName">Pak Agus Santoso</div>
+                </div>
+
+                <div class="bg-emerald-50 p-3 rounded-xl">
+                  <div class="text-[11px] text-slate-500">Total Biaya Jasa:</div>
+                  <div class="text-xl font-black text-emerald-600" id="qrisBillAmountVal">Rp 85.000</div>
+                  <div class="text-[10px] text-emerald-800 mt-0.5">100% uang pembayaran masuk langsung ke montir</div>
+                </div>
+
+                <button onclick="confirmDriverPayQris()" class="w-full py-3.5 bg-[#00AA13] hover:bg-[#009210] text-white font-extrabold text-xs rounded-2xl shadow-lg shadow-emerald-500/30">
+                  <i class="fa-solid fa-check-circle mr-1"></i> Konfirmasi Bayar QRIS
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ================= SMARTPHONE 2: MECHANIC / MONTIR ON-DUTY ================= -->
+    <div class="flex flex-col items-center" id="phoneMechWrapper">
+      <div class="text-xs font-bold text-slate-400 mb-2 flex items-center gap-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+        SMARTPHONE MONTIR (PAK AGUS)
+      </div>
+
+      <div class="phone-bezel" id="mechPhoneBezel">
+        <!-- Dynamic Island -->
+        <div class="dynamic-island"><div class="camera-lens"></div></div>
+
+        <!-- Phone Top Status Bar -->
+        <div class="h-10 pt-2 px-7 flex items-center justify-between text-xs font-bold text-slate-900 bg-white z-40 select-none">
+          <span id="clockMech">14:55</span>
+          <div class="flex items-center gap-1.5 text-[11px]">
+            <i class="fa-solid fa-signal"></i>
+            <i class="fa-solid fa-wifi"></i>
+            <i class="fa-solid fa-battery-full text-emerald-600 text-sm"></i>
+          </div>
+        </div>
+
+        <!-- Mechanic Viewport -->
+        <div class="flex-1 flex flex-col relative overflow-hidden bg-slate-50" id="mechViewport">
+          
+          <!-- Mechanic Header -->
+          <div class="bg-slate-900 text-white p-4 pt-3 border-b border-slate-800 flex items-center justify-between shrink-0">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-xl text-amber-400 font-bold">
+                👨‍🔧
               </div>
               <div>
-                <h1 class="font-extrabold text-base tracking-wide flex items-center gap-1.5">
-                  MONTIR SIAGA
-                  <span class="bg-red-900/60 text-[10px] px-1.5 py-0.5 rounded text-red-200 border border-red-400/40 font-mono">24 JAM</span>
-                </h1>
-                <p class="text-[11px] text-amber-100/90 font-medium">Bantuan Darurat Mobil Mogok</p>
+                <div class="text-sm font-extrabold">Pak Agus Santoso</div>
+                <div class="text-[11px] text-slate-400">Honda Vario 160 • B 4921 TZX</div>
               </div>
             </div>
-            <button class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white text-xs hover:bg-white/20 transition">
-              <i class="fa-regular fa-bell"></i>
-            </button>
+            <div class="bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-[10px] font-bold px-2.5 py-1 rounded-full">
+              🟢 ONLINE
+            </div>
           </div>
 
-          <!-- Current Location Pill -->
-          <div class="mt-3.5 bg-black/25 backdrop-blur-md rounded-xl p-2.5 flex items-center space-x-2.5 border border-white/10">
-            <div class="w-7 h-7 rounded-lg bg-red-500/80 flex items-center justify-center text-white shrink-0">
-              <i class="fa-solid fa-location-dot text-xs animate-bounce"></i>
+          <!-- MAP AREA FOR MECHANIC -->
+          <div class="relative w-full" style="height: 48%;">
+            <div id="mechMap" class="w-full h-full"></div>
+            <div class="absolute top-3 left-3 bg-slate-900/90 backdrop-blur-md text-white px-3 py-1.5 rounded-xl text-xs font-bold border border-slate-700 flex items-center gap-2 z-[400]">
+              <i class="fa-solid fa-location-crosshairs text-amber-400"></i>
+              Radar GPS Montir Aktif
             </div>
-            <div class="flex-1 min-w-0">
-              <div class="text-[10px] text-amber-200 uppercase font-bold tracking-wider">Lokasi Mobil Anda</div>
-              <div class="text-xs font-semibold truncate text-white" id="userAddress">Jl. Jend. Sudirman Kav. 52 (Depan Polda Metro)</div>
-            </div>
-            <button onclick="editLocation()" class="text-[11px] bg-white/15 px-2 py-1 rounded text-white font-medium hover:bg-white/30">
-              Ubah
-            </button>
           </div>
-        </div>
 
-        <!-- Vehicle Selector Card -->
-        <div class="px-4 -mt-2">
-          <div class="bg-slate-800/90 border border-slate-700/70 rounded-2xl p-3 shadow-md flex items-center justify-between">
-            <div class="flex items-center space-x-3">
-              <div class="w-10 h-10 rounded-xl bg-slate-700 flex items-center justify-center text-amber-400 text-lg">
-                <i class="fa-solid fa-car-side"></i>
+          <!-- MECHANIC CONTROL SHEET -->
+          <div class="flex-1 bg-white rounded-t-[26px] -mt-5 p-4 shadow-2xl border-t border-slate-100 flex flex-col z-[450] overflow-y-auto no-scrollbar">
+            <div class="w-9 h-1 bg-slate-300 rounded-full mx-auto mb-3 shrink-0"></div>
+
+            <div id="mechIdleState" class="space-y-3">
+              <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-center">
+                <div class="text-2xl mb-1">📡</div>
+                <h4 class="text-sm font-extrabold text-amber-900">Menunggu Panggilan Darurat</h4>
+                <p class="text-[11px] text-amber-700 mt-1">Saat driver memanggil di HP kiri, radar berdering di sini.</p>
               </div>
-              <div>
-                <span class="text-[10px] text-slate-400 uppercase font-semibold">Mobil Anda</span>
-                <div class="text-xs font-bold text-slate-100 flex items-center gap-1.5">
-                  <span id="vehicleName">Toyota Avanza 1.3 G</span>
-                  <span class="text-[10px] bg-slate-700 px-1.5 py-0.2 rounded text-slate-300 font-mono">B 1234 SKA</span>
+
+              <!-- Quick stats -->
+              <div class="grid grid-cols-2 gap-2 text-center">
+                <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                  <div class="text-[10px] text-slate-400">Saldo Dompet Montir:</div>
+                  <div class="text-sm font-extrabold text-slate-800" id="mechWalletVal">Rp 485.000</div>
                 </div>
-              </div>
-            </div>
-            <button onclick="changeVehicle()" class="text-xs text-amber-400 font-semibold hover:text-amber-300">
-              Ganti
-            </button>
-          </div>
-        </div>
-
-        <!-- Emergency Categories -->
-        <div class="px-4 mt-4">
-          <div class="flex items-center justify-between mb-2.5">
-            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-              <span class="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
-              Pilih Jenis Kendala Mobil
-            </h2>
-            <span class="text-[10px] text-slate-400">Tarif Transparan</span>
-          </div>
-
-          <div class="grid grid-cols-2 gap-2.5" id="issueGrid">
-            <!-- Item 1: Aki -->
-            <div onclick="selectIssue('aki')" id="card-aki" class="issue-card cursor-pointer p-3 rounded-2xl border-2 border-red-500 bg-red-500/10 transition-all flex flex-col justify-between">
-              <div class="flex items-start justify-between">
-                <div class="w-9 h-9 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center text-base">
-                  <i class="fa-solid fa-car-battery"></i>
-                </div>
-                <span class="text-[10px] bg-emerald-500/20 text-emerald-400 font-bold px-1.5 py-0.5 rounded">Populer</span>
-              </div>
-              <div class="mt-2">
-                <div class="font-bold text-xs text-white">Aki Soak / Baterai</div>
-                <div class="text-[10px] text-slate-400 mt-0.5">Jumper aki darurat & cek alternator</div>
-              </div>
-              <div class="mt-2 pt-2 border-t border-slate-700/60 flex items-center justify-between">
-                <span class="text-[11px] font-extrabold text-amber-400">Rp 85.000</span>
-                <span class="text-[10px] text-slate-400">~15 mnt</span>
-              </div>
-            </div>
-
-            <!-- Item 2: Ban Bocor -->
-            <div onclick="selectIssue('ban')" id="card-ban" class="issue-card cursor-pointer p-3 rounded-2xl border border-slate-700 bg-slate-800/60 hover:bg-slate-800 transition-all flex flex-col justify-between">
-              <div class="flex items-start justify-between">
-                <div class="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-base">
-                  <i class="fa-solid fa-compact-disc"></i>
-                </div>
-              </div>
-              <div class="mt-2">
-                <div class="font-bold text-xs text-white">Ban Bocor / Kempes</div>
-                <div class="text-[10px] text-slate-400 mt-0.5">Tambal tubeless & ganti ban serep</div>
-              </div>
-              <div class="mt-2 pt-2 border-t border-slate-700/60 flex items-center justify-between">
-                <span class="text-[11px] font-extrabold text-amber-400">Rp 65.000</span>
-                <span class="text-[10px] text-slate-400">~15 mnt</span>
-              </div>
-            </div>
-
-            <!-- Item 3: Mesin Mati -->
-            <div onclick="selectIssue('mesin')" id="card-mesin" class="issue-card cursor-pointer p-3 rounded-2xl border border-slate-700 bg-slate-800/60 hover:bg-slate-800 transition-all flex flex-col justify-between">
-              <div class="flex items-start justify-between">
-                <div class="w-9 h-9 rounded-xl bg-red-500/20 text-red-400 flex items-center justify-center text-base">
-                  <i class="fa-solid fa-triangle-exclamation"></i>
-                </div>
-              </div>
-              <div class="mt-2">
-                <div class="font-bold text-xs text-white">Mesin Mati Mendadak</div>
-                <div class="text-[10px] text-slate-400 mt-0.5">Diagnostik kelistrikan & busi/fuel pump</div>
-              </div>
-              <div class="mt-2 pt-2 border-t border-slate-700/60 flex items-center justify-between">
-                <span class="text-[11px] font-extrabold text-amber-400">Rp 120.000</span>
-                <span class="text-[10px] text-slate-400">~20 mnt</span>
-              </div>
-            </div>
-
-            <!-- Item 4: Overheat -->
-            <div onclick="selectIssue('overheat')" id="card-overheat" class="issue-card cursor-pointer p-3 rounded-2xl border border-slate-700 bg-slate-800/60 hover:bg-slate-800 transition-all flex flex-col justify-between">
-              <div class="flex items-start justify-between">
-                <div class="w-9 h-9 rounded-xl bg-orange-500/20 text-orange-400 flex items-center justify-center text-base">
-                  <i class="fa-solid fa-temperature-arrow-up"></i>
-                </div>
-              </div>
-              <div class="mt-2">
-                <div class="font-bold text-xs text-white">Mesin Overheat</div>
-                <div class="text-[10px] text-slate-400 mt-0.5">Radiator bocor, kipas & isi coolant</div>
-              </div>
-              <div class="mt-2 pt-2 border-t border-slate-700/60 flex items-center justify-between">
-                <span class="text-[11px] font-extrabold text-amber-400">Rp 95.000</span>
-                <span class="text-[10px] text-slate-400">~20 mnt</span>
-              </div>
-            </div>
-
-            <!-- Item 5: BBM Habis -->
-            <div onclick="selectIssue('bbm')" id="card-bbm" class="issue-card cursor-pointer p-3 rounded-2xl border border-slate-700 bg-slate-800/60 hover:bg-slate-800 transition-all flex flex-col justify-between">
-              <div class="flex items-start justify-between">
-                <div class="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-base">
-                  <i class="fa-solid fa-gas-pump"></i>
-                </div>
-              </div>
-              <div class="mt-2">
-                <div class="font-bold text-xs text-white">Kehabisan BBM</div>
-                <div class="text-[10px] text-slate-400 mt-0.5">Antar bensin jerigen 5L ke lokasi</div>
-              </div>
-              <div class="mt-2 pt-2 border-t border-slate-700/60 flex items-center justify-between">
-                <span class="text-[11px] font-extrabold text-amber-400">Rp 50.000+</span>
-                <span class="text-[10px] text-slate-400">~15 mnt</span>
-              </div>
-            </div>
-
-            <!-- Item 6: Derek / Towing -->
-            <div onclick="selectIssue('derek')" id="card-derek" class="issue-card cursor-pointer p-3 rounded-2xl border border-slate-700 bg-slate-800/60 hover:bg-slate-800 transition-all flex flex-col justify-between">
-              <div class="flex items-start justify-between">
-                <div class="w-9 h-9 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-base">
-                  <i class="fa-solid fa-truck-pickup"></i>
-                </div>
-                <span class="text-[10px] bg-red-500/20 text-red-400 font-bold px-1.5 py-0.5 rounded">Truk</span>
-              </div>
-              <div class="mt-2">
-                <div class="font-bold text-xs text-white">Towing / Derek</div>
-                <div class="text-[10px] text-slate-400 mt-0.5">Gendong mobil ke bengkel resmi terdekat</div>
-              </div>
-              <div class="mt-2 pt-2 border-t border-slate-700/60 flex items-center justify-between">
-                <span class="text-[11px] font-extrabold text-amber-400">Rp 350.000</span>
-                <span class="text-[10px] text-slate-400">~30 mnt</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Emergency Notes / Voice Input -->
-        <div class="px-4 mt-3">
-          <div class="bg-slate-800/50 border border-slate-700/60 rounded-xl p-2.5 flex items-center space-x-2">
-            <i class="fa-solid fa-circle-info text-amber-400 text-xs shrink-0"></i>
-            <input type="text" id="userProblemNote" placeholder="Catatan: Bau hangus / indikator aki merah menyala..." class="bg-transparent text-xs text-slate-200 placeholder-slate-500 flex-1 outline-none" />
-            <button class="text-slate-400 hover:text-amber-400">
-              <i class="fa-solid fa-microphone text-xs"></i>
-            </button>
-          </div>
-        </div>
-
-        <!-- Safety Banner -->
-        <div class="px-4 mt-3">
-          <div class="bg-amber-950/40 border border-amber-600/30 rounded-xl p-2.5 flex items-center space-x-2.5">
-            <span class="text-base text-amber-400">⚠️</span>
-            <div class="text-[10px] text-amber-200/90 leading-tight">
-              <strong>Tips Aman:</strong> Nyalakan lampu hazard, pasang segitiga 30 meter di belakang, dan tunggu di trotoar yang aman.
-            </div>
-          </div>
-        </div>
-
-        <!-- Spacer -->
-        <div class="h-28"></div>
-
-        <!-- Bottom Floating Action Bar -->
-        <div class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-slate-950 via-slate-950/95 to-transparent backdrop-blur-sm z-40">
-          <div class="bg-slate-900 border border-slate-700/80 rounded-2xl p-3 shadow-xl">
-            <div class="flex items-center justify-between text-xs mb-2.5">
-              <div class="flex items-center space-x-2">
-                <span class="text-[10px] text-slate-400">Estimasi Tiba:</span>
-                <span class="font-bold text-emerald-400 flex items-center gap-1">
-                  <i class="fa-regular fa-clock"></i> 8 - 12 Menit
-                </span>
-              </div>
-              <div class="text-right">
-                <span class="text-[10px] text-slate-400">Total Estimasi:</span>
-                <span class="font-extrabold text-amber-400 text-sm ml-1" id="totalEstimatePrice">Rp 85.000</span>
-              </div>
-            </div>
-
-            <!-- Big CTA -->
-            <button onclick="startSearching()" class="w-full py-3.5 bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 active:scale-[0.99] text-white font-extrabold text-sm rounded-xl shadow-lg shadow-red-600/30 flex items-center justify-center space-x-2 transition-all">
-              <i class="fa-solid fa-headset text-base animate-pulse"></i>
-              <span>PANGGIL MONTIR SEKARANG</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- ================= SCREEN 2: RADAR SEARCHING (MATCHING ALGORITHM) ================= -->
-      <div id="screenSearching" class="hidden flex-1 flex flex-col justify-between p-6 text-center relative overflow-hidden bg-slate-950">
-        <!-- Background Map Silhouette -->
-        <div class="absolute inset-0 opacity-20 pointer-events-none">
-          <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#475569" stroke-width="0.8"/>
-              </pattern>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#grid)" />
-            <path d="M 20 80 Q 150 120 280 90 T 400 240" fill="none" stroke="#f59e0b" stroke-width="3" stroke-dasharray="4 4" />
-            <path d="M 80 320 Q 200 260 350 420" fill="none" stroke="#38bdf8" stroke-width="2" />
-          </svg>
-        </div>
-
-        <!-- Top Header -->
-        <div class="relative z-10 pt-4">
-          <div class="inline-flex items-center space-x-2 bg-red-500/10 border border-red-500/30 px-3 py-1 rounded-full text-red-400 text-xs font-semibold">
-            <span class="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
-            <span>SIAGA DARURAT AKTIF</span>
-          </div>
-          <h2 class="text-xl font-extrabold text-white mt-3">Mencari Montir Terdekat...</h2>
-          <p class="text-xs text-slate-400 mt-1 max-w-xs mx-auto">Sistem kami menyiarkan sinyal darurat ke montir bersertifikat di radius 3 km.</p>
-        </div>
-
-        <!-- Radar Animation Center -->
-        <div class="relative my-auto flex items-center justify-center h-64 z-10">
-          <!-- Pulse rings -->
-          <div class="absolute w-56 h-56 rounded-full border border-red-500/30 radar-wave"></div>
-          <div class="absolute w-56 h-56 rounded-full border border-amber-500/30 radar-wave-delay"></div>
-          <div class="w-40 h-40 rounded-full border border-slate-700 bg-slate-900/60 flex items-center justify-center relative">
-            <div class="w-24 h-24 rounded-full border border-slate-600 bg-slate-800/80 flex items-center justify-center shadow-inner">
-              <!-- Center Car Pin -->
-              <div class="w-12 h-12 rounded-full bg-gradient-to-tr from-red-600 to-amber-500 flex items-center justify-center text-white text-lg shadow-lg shadow-red-500/40">
-                <i class="fa-solid fa-car"></i>
-              </div>
-            </div>
-            <!-- Nearby detected mechanic dots -->
-            <div class="absolute top-4 right-6 w-3 h-3 rounded-full bg-emerald-400 animate-ping"></div>
-            <div class="absolute top-4 right-6 w-3 h-3 rounded-full bg-emerald-400 border border-white"></div>
-            <div class="absolute bottom-8 left-6 w-2.5 h-2.5 rounded-full bg-emerald-400 border border-white"></div>
-            <div class="absolute top-12 left-8 w-2.5 h-2.5 rounded-full bg-emerald-400/80"></div>
-          </div>
-        </div>
-
-        <!-- Progress Steps -->
-        <div class="relative z-10 bg-slate-900/90 border border-slate-800 rounded-2xl p-4 text-left">
-          <div class="flex items-center space-x-3 text-xs text-slate-300 mb-2.5">
-            <i class="fa-solid fa-circle-check text-emerald-400"></i>
-            <span>Koordinat GPS terdeteksi (Akurasi 5m)</span>
-          </div>
-          <div class="flex items-center space-x-3 text-xs text-slate-300 mb-2.5">
-            <i class="fa-solid fa-circle-check text-emerald-400"></i>
-            <span>3 montir siaga ditemukan membawa peralatan Aki</span>
-          </div>
-          <div class="flex items-center space-x-3 text-xs text-amber-400 font-semibold animate-pulse">
-            <i class="fa-solid fa-spinner fa-spin"></i>
-            <span id="searchingStatusText">Menunggu konfirmasi montir tercepat...</span>
-          </div>
-
-          <button onclick="cancelSearch()" class="mt-4 w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200 text-xs rounded-xl font-medium border border-slate-700 transition">
-            Batalkan Pencarian
-          </button>
-        </div>
-      </div>
-
-      <!-- ================= SCREEN 3: LIVE TRACKING & MECHANIC DISPATCH ================= -->
-      <div id="screenTracking" class="hidden flex-1 flex flex-col relative overflow-hidden bg-slate-950">
-        <!-- Interactive Simulated Map Background -->
-        <div class="h-64 sm:h-72 w-full relative bg-slate-900 overflow-hidden shrink-0">
-          <!-- Vector Map Graphic -->
-          <svg class="w-full h-full object-cover" viewBox="0 0 400 300" preserveAspectRatio="none">
-            <!-- Road grid -->
-            <rect width="400" height="300" fill="#0f172a" />
-            <!-- City blocks -->
-            <rect x="20" y="20" width="70" height="60" rx="4" fill="#1e293b" />
-            <rect x="110" y="20" width="140" height="60" rx="4" fill="#1e293b" />
-            <rect x="270" y="20" width="110" height="60" rx="4" fill="#1e293b" />
-
-            <rect x="20" y="100" width="120" height="90" rx="4" fill="#1e293b" />
-            <rect x="160" y="100" width="90" height="90" rx="4" fill="#1e293b" />
-            <rect x="270" y="100" width="110" height="90" rx="4" fill="#1e293b" />
-
-            <rect x="20" y="210" width="180" height="70" rx="4" fill="#1e293b" />
-            <rect x="220" y="210" width="160" height="70" rx="4" fill="#1e293b" />
-
-            <!-- Main road -->
-            <path d="M 0 90 L 400 90" stroke="#334155" stroke-width="14" />
-            <path d="M 150 0 L 150 300" stroke="#334155" stroke-width="14" />
-            <path d="M 260 0 L 260 300" stroke="#334155" stroke-width="12" />
-            <path d="M 0 200 L 400 200" stroke="#334155" stroke-width="12" />
-
-            <!-- Route Polyline (Mechanic to Car) -->
-            <path id="routeLine" d="M 80 90 L 150 90 L 150 160 L 260 160" stroke="#f59e0b" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none" stroke-dasharray="6 4" />
-
-            <!-- Mechanic moving pin -->
-            <g id="mechanicPin" transform="translate(80, 90)">
-              <circle r="16" fill="#10b981" opacity="0.3" class="animate-ping" />
-              <circle r="12" fill="#10b981" />
-              <!-- Motorcycle icon -->
-              <text x="0" y="4" font-size="11" text-anchor="middle" fill="white">🏍️</text>
-            </g>
-
-            <!-- Stranded Car Pin -->
-            <g transform="translate(260, 160)">
-              <circle r="18" fill="#ef4444" opacity="0.3" class="animate-ping" />
-              <circle r="13" fill="#ef4444" />
-              <text x="0" y="4" font-size="11" text-anchor="middle" fill="white">🚗</text>
-            </g>
-          </svg>
-
-          <!-- Top Status Bar overlay -->
-          <div class="absolute top-3 left-3 right-3 flex items-center justify-between">
-            <div class="bg-slate-900/90 backdrop-blur-md border border-slate-700/80 px-3 py-1.5 rounded-full flex items-center space-x-2 shadow-lg">
-              <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span class="text-xs font-bold text-white">Montir Menuju Lokasi</span>
-            </div>
-            <div class="bg-red-600 text-white font-extrabold text-xs px-3 py-1.5 rounded-full shadow-lg">
-              ETA: <span id="etaTimer">7 Menit</span>
-            </div>
-          </div>
-
-          <!-- Recenter Map Button -->
-          <button class="absolute bottom-3 right-3 w-8 h-8 rounded-full bg-slate-900/90 border border-slate-700 text-slate-300 flex items-center justify-center shadow">
-            <i class="fa-solid fa-location-crosshairs text-xs"></i>
-          </button>
-        </div>
-
-        <!-- Mechanic Profile & Actions Bottom Sheet -->
-        <div class="flex-1 bg-slate-900 border-t border-slate-800 rounded-t-3xl p-4 flex flex-col justify-between overflow-y-auto no-scrollbar shadow-2xl">
-          <!-- Drag Handle -->
-          <div class="w-10 h-1 bg-slate-700 rounded-full mx-auto -mt-1 mb-3"></div>
-
-          <!-- Mechanic Card -->
-          <div class="bg-slate-800/80 border border-slate-700/70 rounded-2xl p-3 flex items-center justify-between">
-            <div class="flex items-center space-x-3">
-              <div class="relative">
-                <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=faces" class="w-12 h-12 rounded-full object-cover border-2 border-emerald-400" alt="Avatar" />
-                <span class="absolute -bottom-1 -right-1 bg-emerald-500 text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center">
-                  <i class="fa-solid fa-check"></i>
-                </span>
-              </div>
-              <div>
-                <div class="flex items-center space-x-1.5">
-                  <h3 class="font-bold text-sm text-white">Pak Agus Santoso</h3>
-                  <span class="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.2 rounded font-medium">Verified</span>
-                </div>
-                <div class="flex items-center space-x-2 text-xs text-slate-400 mt-0.5">
-                  <span class="text-amber-400 font-bold flex items-center gap-1">
-                    <i class="fa-solid fa-star text-[10px]"></i> 4.9
-                  </span>
-                  <span>•</span>
-                  <span>340+ Perbaikan</span>
-                </div>
-                <div class="text-[11px] text-slate-300 font-mono mt-0.5">
-                  🛵 Honda Vario 160 <span class="text-slate-400">(B 4921 TZX)</span>
+                <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                  <div class="text-[10px] text-slate-400">Rating Servis:</div>
+                  <div class="text-sm font-extrabold text-amber-600">⭐ 4.9 (342 Order)</div>
                 </div>
               </div>
             </div>
 
-            <div class="text-right">
-              <div class="text-[10px] text-slate-400">Jarak</div>
-              <div class="text-xs font-bold text-white">1.8 km</div>
-              <div class="text-[9px] text-emerald-400 mt-0.5 font-medium">Bawa Toolkit Lengkap</div>
-            </div>
-          </div>
-
-          <!-- Quick Action Buttons -->
-          <div class="grid grid-cols-2 gap-2.5 my-3">
-            <button onclick="openChatModal()" class="py-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-amber-400 font-bold text-xs rounded-xl flex items-center justify-center space-x-2 transition">
-              <i class="fa-solid fa-comment-dots text-sm"></i>
-              <span>Chat Montir</span>
-            </button>
-            <button onclick="simulateCall()" class="py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 text-white font-bold text-xs rounded-xl flex items-center justify-center space-x-2 shadow-lg shadow-emerald-600/20 transition">
-              <i class="fa-solid fa-phone text-sm"></i>
-              <span>Telepon Montir</span>
-            </button>
-          </div>
-
-          <!-- Service Order Status Stepper -->
-          <div class="bg-slate-950/60 border border-slate-800 rounded-xl p-3">
-            <div class="text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-2">Status Penanganan</div>
-            <div class="space-y-2 text-xs">
-              <div class="flex items-center space-x-2 text-emerald-400 font-medium">
-                <i class="fa-solid fa-check-circle text-xs"></i>
-                <span>Pesanan diterima oleh montir (09:42)</span>
+            <!-- ACTIVE ORDER STATE FOR MECHANIC -->
+            <div id="mechActiveState" class="space-y-3 hidden">
+              <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-3.5 flex items-center justify-between">
+                <div>
+                  <span class="text-[10px] bg-emerald-600 text-white font-bold px-2 py-0.5 rounded-md" id="mechOrderBadge">ORDER AKTIF</span>
+                  <h4 class="text-sm font-extrabold text-slate-900 mt-1" id="mechOrderCustomer">Toyota Avanza (B 1234 SKA)</h4>
+                  <p class="text-xs text-slate-600" id="mechOrderAddress">Jl. Sudirman No. 45</p>
+                </div>
+                <div class="text-right">
+                  <div class="text-xs font-bold text-emerald-700" id="mechOrderStatus">Menuju Lokasi</div>
+                  <div class="text-[10px] text-slate-400">~4 menit</div>
+                </div>
               </div>
-              <div class="flex items-center space-x-2 text-amber-400 font-medium animate-pulse">
-                <i class="fa-solid fa-motorcycle text-xs"></i>
-                <span>Montir sedang meluncur ke lokasi Anda</span>
-              </div>
-              <div class="flex items-center space-x-2 text-slate-500">
-                <i class="fa-regular fa-circle text-xs"></i>
-                <span>Pemeriksaan kondisi fisik mobil & aki</span>
+
+              <!-- Workflow Actions -->
+              <div class="space-y-2">
+                <button onclick="setMechStep('arrived')" id="btnMechArrived" class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow">
+                  📍 Telah Tiba di Lokasi Driver
+                </button>
+                <button onclick="setMechStep('repairing')" id="btnMechRepairing" class="w-full py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl shadow hidden">
+                  🔧 Mulai Pengerjaan Mobil
+                </button>
+                <button onclick="openMechBillingModal()" id="btnMechBill" class="w-full py-2.5 bg-[#00AA13] hover:bg-[#009210] text-white font-bold text-xs rounded-xl shadow hidden">
+                  💳 Terbitkan Tagihan QRIS Montir
+                </button>
               </div>
             </div>
-          </div>
 
-          <!-- Safety Alert Box -->
-          <div class="mt-2.5 bg-red-950/40 border border-red-700/30 rounded-xl p-2.5 flex items-center space-x-2">
-            <i class="fa-solid fa-triangle-exclamation text-red-400 text-xs shrink-0"></i>
-            <span class="text-[10px] text-red-200">Jika berada di jalan tol, segera berdiri di balik pagar pembatas (guardrail)!</span>
-          </div>
-
-          <!-- Demo Buttons: Simulate arrival & complete -->
-          <div class="flex items-center space-x-2 mt-3 pt-2 border-t border-slate-800">
-            <button onclick="simulateMechanicArrived()" class="flex-1 py-2 bg-amber-600/20 border border-amber-500/40 text-amber-300 rounded-lg text-xs font-semibold hover:bg-amber-600/30">
-              ⚡ Simulasi Montir Tiba
-            </button>
-            <button onclick="finishService()" class="flex-1 py-2 bg-emerald-600/20 border border-emerald-500/40 text-emerald-300 rounded-lg text-xs font-semibold hover:bg-emerald-600/30">
-              ✅ Selesaikan Servis
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- ================= SCREEN 4: SERVICE SUMMARY & PAYMENT ================= -->
-      <div id="screenSummary" class="hidden flex-1 flex flex-col justify-between p-5 bg-slate-950 overflow-y-auto no-scrollbar">
-        <div>
-          <!-- Header -->
-          <div class="text-center pt-2 pb-4 border-b border-slate-800">
-            <div class="w-14 h-14 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center text-2xl mx-auto mb-2">
-              <i class="fa-solid fa-circle-check"></i>
-            </div>
-            <h2 class="text-lg font-extrabold text-white">Mobil Berhasil Diperbaiki!</h2>
-            <p class="text-xs text-slate-400">Pekerjaan telah selesai dan diverifikasi oleh montir.</p>
-          </div>
-
-          <!-- Summary Breakdown Card -->
-          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 mt-4 shadow-lg">
-            <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider mb-3">Rincian Pekerjaan</h3>
-            
-            <div class="space-y-2 text-xs">
-              <div class="flex justify-between">
-                <span class="text-slate-400">Jasa Jumper Aki Darurat</span>
-                <span class="font-semibold text-white">Rp 75.000</span>
-              </div>
-              <div class="flex justify-between">
-                <span class="text-slate-400">Pengecekan Voltase Alternator</span>
-                <span class="font-semibold text-emerald-400">GRATIS</span>
-              </div>
-              <div class="flex justify-between">
-                <span class="text-slate-400">Biaya Siaga Panggilan Darurat</span>
-                <span class="font-semibold text-white">Rp 10.000</span>
-              </div>
-              <div class="border-t border-slate-800 my-2 pt-2 flex justify-between font-extrabold text-sm">
-                <span class="text-white">Total Tagihan</span>
-                <span class="text-amber-400 text-base">Rp 85.000</span>
+            <!-- MECHANIC INCOMING CALL ALERT MODAL -->
+            <div id="mechIncomingCallModal" class="absolute inset-0 bg-slate-900/90 backdrop-blur-md z-50 flex items-center justify-center p-6 text-center hidden">
+              <div class="bg-white rounded-3xl p-6 w-full space-y-4 shadow-2xl animate-bounce">
+                <div class="w-16 h-16 rounded-full bg-red-100 mx-auto flex items-center justify-center text-red-600 text-3xl">
+                  🚨
+                </div>
+                <div>
+                  <span class="bg-red-600 text-white text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase">Panggilan Darurat Masuk!</span>
+                  <h3 class="text-base font-black text-slate-900 mt-2" id="incomingOrderTitle">GoRide (Montir Motor)</h3>
+                  <p class="text-xs text-slate-600 mt-1" id="incomingOrderLoc">Jl. Sudirman No. 45 (Avanza B 1234 SKA)</p>
+                  <p class="text-xs font-bold text-emerald-600 mt-1">Estimasi Jasa: <span id="incomingOrderPrice">Rp 20.000</span></p>
+                </div>
+                <div class="flex gap-2">
+                  <button onclick="rejectIncomingCall()" class="flex-1 py-3 bg-slate-100 text-slate-600 font-bold text-xs rounded-xl hover:bg-slate-200">
+                    Abaikan
+                  </button>
+                  <button onclick="acceptIncomingCall()" class="flex-1 py-3 bg-[#00AA13] text-white font-black text-xs rounded-xl shadow-lg shadow-emerald-500/40 hover:bg-emerald-700">
+                    Terima Order ➔
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
 
-          <!-- Payment Methods -->
-          <div class="mt-4">
-            <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Metode Pembayaran</h3>
-            <div class="grid grid-cols-3 gap-2 text-center text-xs">
-              <div class="p-2.5 rounded-xl border-2 border-red-500 bg-red-500/10 cursor-pointer">
-                <div class="font-bold text-white text-[11px]">QRIS / E-Wallet</div>
-                <div class="text-[9px] text-slate-400 mt-0.5">GoPay, OVO, BCA</div>
-              </div>
-              <div class="p-2.5 rounded-xl border border-slate-800 bg-slate-900 cursor-pointer hover:border-slate-700">
-                <div class="font-bold text-white text-[11px]">Tunai (Cash)</div>
-                <div class="text-[9px] text-slate-400 mt-0.5">Bayar ke Montir</div>
-              </div>
-              <div class="p-2.5 rounded-xl border border-slate-800 bg-slate-900 cursor-pointer hover:border-slate-700">
-                <div class="font-bold text-white text-[11px]">Kartu Kredit</div>
-                <div class="text-[9px] text-slate-400 mt-0.5">Visa / Mastercard</div>
+            <!-- MECHANIC BILLING INPUT MODAL -->
+            <div id="mechBillingModal" class="absolute inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-6 hidden">
+              <div class="bg-white rounded-3xl p-6 w-full space-y-4 text-center">
+                <div class="flex justify-between items-center">
+                  <h3 class="text-sm font-extrabold text-slate-900">Input Tagihan Perbaikan</h3>
+                  <button onclick="closeMechBillingModal()"><i class="fa-solid fa-xmark text-slate-400 text-lg"></i></button>
+                </div>
+                <div class="text-left">
+                  <label class="text-[11px] font-bold text-slate-600">Total Nominal Jasa & Sparepart (Rp):</label>
+                  <input type="number" id="inputBillAmount" value="85000" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-lg font-black text-slate-900 outline-none mt-1" />
+                </div>
+                <div class="text-left">
+                  <label class="text-[11px] font-bold text-slate-600">Keterangan Servis:</label>
+                  <input type="text" id="inputBillDesc" value="Jumper aki portable & tes kelistrikan dinamo" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs text-slate-800 outline-none mt-1" />
+                </div>
+                <div class="text-[11px] text-emerald-700 bg-emerald-50 p-2.5 rounded-xl font-medium">
+                  💰 100% uang tagihan ini akan dibayar driver via QRIS dan masuk langsung ke Anda.
+                </div>
+                <button onclick="submitMechBill()" class="w-full py-3.5 bg-[#00AA13] text-white font-black text-xs rounded-xl shadow-lg shadow-emerald-500/30 hover:bg-[#009210]">
+                  Kirim Tagihan QRIS ke Driver ➔
+                </button>
               </div>
             </div>
-          </div>
 
-          <!-- Rating -->
-          <div class="mt-4 bg-slate-900/60 border border-slate-800 rounded-2xl p-3 text-center">
-            <div class="text-xs text-slate-300 font-semibold mb-1.5">Beri Ulasan untuk Pak Agus Santoso</div>
-            <div class="flex justify-center space-x-2 text-amber-400 text-xl cursor-pointer">
-              <i class="fa-solid fa-star"></i>
-              <i class="fa-solid fa-star"></i>
-              <i class="fa-solid fa-star"></i>
-              <i class="fa-solid fa-star"></i>
-              <i class="fa-solid fa-star"></i>
-            </div>
-            <input type="text" placeholder="Pelayanan sangat cepat dan ramah!" class="mt-2 w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-slate-200 placeholder-slate-500 outline-none" />
           </div>
         </div>
-
-        <!-- Back to Home Button -->
-        <div class="mt-4 pt-3 border-t border-slate-800">
-          <button onclick="resetToHome()" class="w-full py-3 bg-gradient-to-r from-red-600 to-amber-600 text-white font-bold text-xs rounded-xl shadow-lg hover:from-red-500 transition">
-            Selesai & Kembali ke Beranda
-          </button>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- Bottom Navigation Bar (Persistent on Home) -->
-    <div id="bottomNav" class="h-14 bg-slate-900/95 border-t border-slate-800/80 px-6 flex items-center justify-between text-slate-400 text-xs shrink-0">
-      <button class="flex flex-col items-center space-y-1 text-red-500">
-        <i class="fa-solid fa-house text-sm"></i>
-        <span class="text-[10px] font-bold">Beranda</span>
-      </button>
-      <button onclick="alert('Fitur riwayat pesanan darurat')" class="flex flex-col items-center space-y-1 hover:text-slate-200">
-        <i class="fa-solid fa-receipt text-sm"></i>
-        <span class="text-[10px]">Aktivitas</span>
-      </button>
-      <button onclick="alert('Fitur dompet & metode pembayaran')" class="flex flex-col items-center space-y-1 hover:text-slate-200">
-        <i class="fa-solid fa-wallet text-sm"></i>
-        <span class="text-[10px]">Dompet</span>
-      </button>
-      <button onclick="alert('Profil pengguna & data kendaraan')" class="flex flex-col items-center space-y-1 hover:text-slate-200">
-        <i class="fa-solid fa-user text-sm"></i>
-        <span class="text-[10px]">Profil</span>
-      </button>
-    </div>
-
-  </div>
-
-  <!-- Simulated In-App Chat Modal -->
-  <div id="chatModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-700 w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl flex flex-col h-[520px]">
-      <!-- Chat Header -->
-      <div class="bg-slate-800 px-4 py-3 flex items-center justify-between border-b border-slate-700">
-        <div class="flex items-center space-x-2.5">
-          <div class="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-white font-bold text-xs">
-            AS
-          </div>
-          <div>
-            <div class="text-xs font-bold text-white">Pak Agus Santoso (Montir)</div>
-            <div class="text-[10px] text-emerald-400">Online • 1.2 km dari Anda</div>
-          </div>
-        </div>
-        <button onclick="closeChatModal()" class="text-slate-400 hover:text-white text-base">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
-      </div>
-
-      <!-- Chat Messages -->
-      <div class="flex-1 p-3 overflow-y-auto space-y-3 text-xs" id="chatContainer">
-        <div class="text-center text-[10px] text-slate-500">Hari ini, 09:43</div>
-        <div class="bg-slate-800 text-slate-200 p-2.5 rounded-2xl rounded-tl-none max-w-[80%] border border-slate-700">
-          Halo Pak, saya Pak Agus dari Montir Siaga. Saya sudah meluncur membawa kabel jumper dan aki cadangan. Lokasi bapak di bahu jalan sebelah mana ya?
-        </div>
-        <div class="bg-red-600 text-white p-2.5 rounded-2xl rounded-tr-none max-w-[80%] ml-auto shadow">
-          Halo pak, saya di jalur lambat depan Polda Metro, mobil Avanza hitam plat B 1234 SKA, lampu hazard menyala.
-        </div>
-        <div class="bg-slate-800 text-slate-200 p-2.5 rounded-2xl rounded-tl-none max-w-[80%] border border-slate-700">
-          Siap pak! Sekitar 5 menit lagi saya sampai. Harap tetap di dalam atau di trotoar yang aman ya pak 🙏
-        </div>
-      </div>
-
-      <!-- Chat Input -->
-      <div class="p-3 bg-slate-800/80 border-t border-slate-700 flex items-center space-x-2">
-        <input type="text" id="chatInput" placeholder="Ketik pesan..." class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 outline-none" onkeydown="if(event.key==='Enter') sendChatMessage()" />
-        <button onclick="sendChatMessage()" class="w-8 h-8 rounded-xl bg-red-600 text-white flex items-center justify-center hover:bg-red-500">
-          <i class="fa-solid fa-paper-plane text-xs"></i>
-        </button>
       </div>
     </div>
-  </div>
+
+  </main>
 
   <script>
-    // Live Clock
+    // State
+    let currentMode = 'dual';
+    let currentScale = 1;
+    let selectedTierId = 'goride';
+    let selectedTierName = 'GoRide';
+    let selectedTierPrice = 20000;
+    let driverWallet = 50000;
+    let mechWallet = 485000;
+    let activeOrderData = null;
+
+    // OpenStreetMap Coordinates (Sudirman, Jakarta)
+    const driverCoords = [-6.2255, 106.8120];
+    const mechCoords = [-6.2215, 106.8165];
+
+    // Initialize Maps
+    let driverLeafletMap = null;
+    let mechLeafletMap = null;
+    let driverMarker = null;
+    let mechMarkerOnDriverMap = null;
+    let driverRouteLine = null;
+
+    function initMaps() {
+      // Driver Map
+      driverLeafletMap = L.map('driverMap', { zoomControl: false, attributionControl: false }).setView(driverCoords, 15);
+      L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', { maxZoom: 19, subdomains: 'abc' }).addTo(driverLeafletMap);
+
+      // Driver Pin (Green Circle with white arrow ↑ and halo - exact Gojek)
+      const driverIcon = L.divIcon({
+        className: 'custom-driver-pin',
+        html: `
+          <div style="position:relative; width:40px; height:40px; display:flex; align-items:center; justify-content:center;">
+            <div style="position:absolute; width:70px; height:70px; border-radius:50%; background:rgba(0,170,19,0.22); top:-15px; left:-15px;"></div>
+            <div style="width:38px; height:38px; border-radius:50%; background:#00AA13; border:3.5px solid #FFFFFF; color:#FFFFFF; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:18px; box-shadow:0 4px 12px rgba(0,170,19,0.4);">
+              ↑
+            </div>
+          </div>
+        `,
+        iconSize: [40, 40],
+        iconAnchor: [20, 20],
+      });
+      driverMarker = L.marker(driverCoords, { icon: driverIcon }).addTo(driverLeafletMap);
+
+      // Destination Pin (Orange dot)
+      const destIcon = L.divIcon({
+        className: 'custom-dest-pin',
+        html: `
+          <div style="width:34px; height:34px; border-radius:50%; background:#FA541C; border:3px solid #FFFFFF; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(250,84,28,0.4);">
+            <div style="width:12px; height:12px; border-radius:50%; background:#FA541C; border:2.5px solid #FFFFFF;"></div>
+          </div>
+        `,
+        iconSize: [34, 34],
+        iconAnchor: [17, 17],
+      });
+      L.marker(mechCoords, { icon: destIcon }).addTo(driverLeafletMap);
+
+      // Route line
+      const routePoints = [
+        driverCoords,
+        [driverCoords[0] + 0.0012, driverCoords[1] + 0.0006],
+        [(driverCoords[0] + mechCoords[0])/2, driverCoords[1] + 0.0022],
+        [(driverCoords[0] + mechCoords[0])/2 + 0.001, mechCoords[1] - 0.0015],
+        mechCoords
+      ];
+      driverRouteLine = L.polyline(routePoints, { color: '#00AA13', weight: 5, opacity: 0.95 }).addTo(driverLeafletMap);
+
+      // Mechanic Pin on roads
+      const mechIcon = L.divIcon({
+        className: 'custom-mech-pin',
+        html: `
+          <div style="width:34px; height:34px; border-radius:50%; background:#FFFFFF; border:2.5px solid #00AA13; display:flex; align-items:center; justify-content:center; font-size:16px; box-shadow:0 4px 10px rgba(0,0,0,0.2);">
+            🛵
+          </div>
+        `,
+        iconSize: [34, 34],
+        iconAnchor: [17, 17],
+      });
+      mechMarkerOnDriverMap = L.marker(mechCoords, { icon: mechIcon }).addTo(driverLeafletMap);
+
+      // Mechanic Map
+      mechLeafletMap = L.map('mechMap', { zoomControl: false, attributionControl: false }).setView(mechCoords, 15);
+      L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', { maxZoom: 19, subdomains: 'abc' }).addTo(mechLeafletMap);
+      L.marker(mechCoords, { icon: mechIcon }).addTo(mechLeafletMap);
+      L.marker(driverCoords, { icon: driverIcon }).addTo(mechLeafletMap);
+      L.polyline(routePoints, { color: '#00AA13', weight: 5, opacity: 0.95 }).addTo(mechLeafletMap);
+    }
+
+    // UI Handlers
+    function selectTier(id, name, price, originalPrice) {
+      selectedTierId = id;
+      selectedTierName = name;
+      selectedTierPrice = price;
+
+      document.querySelectorAll('.tier-card').forEach(el => {
+        el.classList.remove('bg-[#F0FDF4]', 'border-[#86EFAC]');
+        el.classList.add('border-transparent');
+      });
+
+      const activeEl = document.getElementById('tier-' + id);
+      if (activeEl) {
+        activeEl.classList.add('bg-[#F0FDF4]', 'border-[#86EFAC]');
+        activeEl.classList.remove('border-transparent');
+      }
+
+      document.getElementById('orderBtnTitle').innerText = 'Order ' + name;
+    }
+
+    function recenterDriverMap() {
+      if (driverLeafletMap) driverLeafletMap.setView(driverCoords, 15, { animate: true });
+    }
+
+    function changeDriverAddress() {
+      const val = prompt('Ubah lokasi jemput mobil mogok:', document.getElementById('driverAddressText').innerText);
+      if (val && val.trim()) {
+        document.getElementById('driverAddressText').innerText = val.trim();
+      }
+    }
+
+    function topUpDriverWallet(amt) {
+      driverWallet += amt;
+      document.getElementById('driverWalletVal').innerText = 'Rp ' + driverWallet.toLocaleString('id-ID');
+      alert('Top Up Berhasil! Saldo MontirPay bertambah Rp ' + amt.toLocaleString('id-ID'));
+    }
+
+    // DRIVER ORDER ACTIONS
+    async function handleDriverOrder() {
+      if (driverWallet < 10000) {
+        alert('Saldo MontirPay kurang! Diperlukan Rp 10.000 untuk biaya admin platform.');
+        topUpDriverWallet(50000);
+        return;
+      }
+
+      // Deduct Admin Fee Rp 10.000
+      driverWallet -= 10000;
+      document.getElementById('driverWalletVal').innerText = 'Rp ' + driverWallet.toLocaleString('id-ID');
+
+      // Show Searching Overlay
+      document.getElementById('searchingOverlay').classList.remove('hidden');
+      document.getElementById('searchServiceTitle').innerText = selectedTierName;
+      document.getElementById('searchServicePrice').innerText = 'Rp ' + selectedTierPrice.toLocaleString('id-ID');
+
+      // Notify Mechanic on Phone 2
+      setTimeout(() => {
+        document.getElementById('mechIncomingCallModal').classList.remove('hidden');
+        document.getElementById('incomingOrderTitle').innerText = selectedTierName;
+        document.getElementById('incomingOrderPrice').innerText = 'Rp ' + selectedTierPrice.toLocaleString('id-ID');
+        document.getElementById('incomingOrderLoc').innerText = document.getElementById('driverAddressText').innerText;
+      }, 1200);
+
+      // Also trigger backend order API
+      try {
+        await fetch('/api/order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            service: { id: selectedTierId, title: selectedTierName, price: selectedTierPrice },
+            address: document.getElementById('driverAddressText').innerText,
+            coords: { latitude: driverCoords[0], longitude: driverCoords[1] },
+            vehicle: 'Toyota Avanza 1.3 G (B 1234 SKA)',
+            problemNote: document.getElementById('driverNoteInput').value,
+          }),
+        });
+      } catch(e) { console.log('API error', e); }
+    }
+
+    function cancelDriverOrder() {
+      document.getElementById('searchingOverlay').classList.add('hidden');
+      document.getElementById('mechIncomingCallModal').classList.add('hidden');
+    }
+
+    // MECHANIC ACTIONS
+    async function acceptIncomingCall() {
+      document.getElementById('mechIncomingCallModal').classList.add('hidden');
+      document.getElementById('searchingOverlay').classList.add('hidden');
+
+      document.getElementById('mechIdleState').classList.add('hidden');
+      document.getElementById('mechActiveState').classList.remove('hidden');
+      document.getElementById('mechOrderStatus').innerText = 'Menuju Lokasi';
+
+      // Move mechanic pin towards driver along the route
+      alert('Order Diterima! Pak Agus segera meluncur ke lokasi pemesan.');
+
+      try {
+        await fetch('/api/order/accept', { method: 'POST' });
+      } catch(e) {}
+    }
+
+    function rejectIncomingCall() {
+      document.getElementById('mechIncomingCallModal').classList.add('hidden');
+    }
+
+    function setMechStep(step) {
+      if (step === 'arrived') {
+        document.getElementById('mechOrderStatus').innerText = 'Tiba di Lokasi';
+        document.getElementById('btnMechArrived').classList.add('hidden');
+        document.getElementById('btnMechRepairing').classList.remove('hidden');
+        alert('Status diupdate: Montir tiba di lokasi mobil mogok!');
+      } else if (step === 'repairing') {
+        document.getElementById('mechOrderStatus').innerText = 'Sedang Diperbaiki';
+        document.getElementById('btnMechRepairing').classList.add('hidden');
+        document.getElementById('btnMechBill').classList.remove('hidden');
+        alert('Status diupdate: Perbaikan mobil sedang berlangsung...');
+      }
+    }
+
+    function openMechBillingModal() {
+      document.getElementById('mechBillingModal').classList.remove('hidden');
+    }
+
+    function closeMechBillingModal() {
+      document.getElementById('mechBillingModal').classList.add('hidden');
+    }
+
+    async function submitMechBill() {
+      const amt = Number(document.getElementById('inputBillAmount').value || 85000);
+      const desc = document.getElementById('inputBillDesc').value;
+      closeMechBillingModal();
+
+      // Trigger QRIS Modal on Driver's Phone
+      document.getElementById('qrisModalDriver').classList.remove('hidden');
+      document.getElementById('qrisBillAmountVal').innerText = 'Rp ' + amt.toLocaleString('id-ID');
+
+      try {
+        await fetch('/api/order/bill', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ amount: amt, desc: desc }),
+        });
+      } catch(e) {}
+    }
+
+    function closeQrisModal() {
+      document.getElementById('qrisModalDriver').classList.add('hidden');
+    }
+
+    async function confirmDriverPayQris() {
+      const amt = Number(document.getElementById('inputBillAmount').value || 85000);
+      closeQrisModal();
+
+      // Credit mechanic wallet
+      mechWallet += amt;
+      document.getElementById('mechWalletVal').innerText = 'Rp ' + mechWallet.toLocaleString('id-ID');
+
+      alert('Pembayaran QRIS Berhasil! Rp ' + amt.toLocaleString('id-ID') + ' telah diterima langsung oleh Pak Agus Santoso.');
+
+      // Reset mechanic view
+      document.getElementById('mechActiveState').classList.add('hidden');
+      document.getElementById('mechIdleState').classList.remove('hidden');
+      document.getElementById('btnMechArrived').classList.remove('hidden');
+      document.getElementById('btnMechRepairing').classList.add('hidden');
+      document.getElementById('btnMechBill').classList.add('hidden');
+
+      try {
+        await fetch('/api/order/pay-qris', { method: 'POST' });
+      } catch(e) {}
+    }
+
+    // MODE SWITCHER
+    function setMode(mode) {
+      currentMode = mode;
+      const driverWrap = document.getElementById('phoneDriverWrapper');
+      const mechWrap = document.getElementById('phoneMechWrapper');
+
+      document.getElementById('btnModeDriver').classList.remove('bg-red-600', 'text-white');
+      document.getElementById('btnModeDriver').classList.add('text-slate-400');
+      document.getElementById('btnModeMech').classList.remove('bg-red-600', 'text-white');
+      document.getElementById('btnModeMech').classList.add('text-slate-400');
+      document.getElementById('btnModeDual').classList.remove('bg-red-600', 'text-white');
+      document.getElementById('btnModeDual').classList.add('text-slate-400');
+
+      if (mode === 'driver') {
+        driverWrap.classList.remove('hidden');
+        mechWrap.classList.add('hidden');
+        document.getElementById('btnModeDriver').classList.add('bg-red-600', 'text-white');
+      } else if (mode === 'mechanic') {
+        driverWrap.classList.add('hidden');
+        mechWrap.classList.remove('hidden');
+        document.getElementById('btnModeMech').classList.add('bg-red-600', 'text-white');
+      } else {
+        driverWrap.classList.remove('hidden');
+        mechWrap.classList.remove('hidden');
+        document.getElementById('btnModeDual').classList.add('bg-red-600', 'text-white');
+      }
+
+      setTimeout(() => {
+        if (driverLeafletMap) driverLeafletMap.invalidateSize();
+        if (mechLeafletMap) mechLeafletMap.invalidateSize();
+      }, 200);
+    }
+
+    // ZOOM SCALE
+    function setScale(scale) {
+      currentScale = scale;
+      document.getElementById('driverPhoneBezel').style.transform = `scale(${scale})`;
+      document.getElementById('mechPhoneBezel').style.transform = `scale(${scale})`;
+    }
+
+    // Live clock
     function updateClock() {
       const now = new Date();
-      const h = String(now.getHours()).padStart(2, '0');
-      const m = String(now.getMinutes()).padStart(2, '0');
-      const timeElem = document.getElementById('liveTime');
-      if (timeElem) timeElem.innerText = `${h}:${m}`;
+      const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      document.getElementById('clockDriver').innerText = timeStr;
+      document.getElementById('clockMech').innerText = timeStr;
     }
     setInterval(updateClock, 1000);
     updateClock();
 
-    let currentSelectedIssue = 'aki';
-    const issuePrices = {
-      aki: 'Rp 85.000',
-      ban: 'Rp 65.000',
-      mesin: 'Rp 120.000',
-      overheat: 'Rp 95.000',
-      bbm: 'Rp 50.000+',
-      derek: 'Rp 350.000'
-    };
-
-    function selectIssue(type) {
-      currentSelectedIssue = type;
-      document.querySelectorAll('.issue-card').forEach(el => {
-        el.classList.remove('border-red-500', 'bg-red-500/10');
-        el.classList.add('border-slate-700', 'bg-slate-800/60');
-      });
-      const target = document.getElementById('card-' + type);
-      if (target) {
-        target.classList.remove('border-slate-700', 'bg-slate-800/60');
-        target.classList.add('border-red-500', 'bg-red-500/10');
-      }
-      document.getElementById('totalEstimatePrice').innerText = issuePrices[type] || 'Rp 85.000';
-    }
-
-    function editLocation() {
-      const newLoc = prompt("Masukkan lokasi jalan / titik mobil mogok:", "Jl. Tol Dalam Kota KM 12 (Arah Semanggi)");
-      if (newLoc) {
-        document.getElementById('userAddress').innerText = newLoc;
-      }
-    }
-
-    function changeVehicle() {
-      const newVehicle = prompt("Ganti jenis kendaraan (Merk & Tipe):", "Honda CR-V 1.5 Turbo - B 8888 BOS");
-      if (newVehicle) {
-        document.getElementById('vehicleName').innerText = newVehicle;
-      }
-    }
-
-    // Switch Screens
-    function startSearching() {
-      document.getElementById('screenHome').classList.add('hidden');
-      document.getElementById('screenSearching').classList.remove('hidden');
-      document.getElementById('bottomNav').classList.add('hidden');
-
-      setTimeout(() => {
-        document.getElementById('screenSearching').classList.add('hidden');
-        document.getElementById('screenTracking').classList.remove('hidden');
-        startMechanicMovement();
-      }, 3000);
-    }
-
-    function cancelSearch() {
-      document.getElementById('screenSearching').classList.add('hidden');
-      document.getElementById('screenHome').classList.remove('hidden');
-      document.getElementById('bottomNav').classList.remove('hidden');
-    }
-
-    let mechanicInterval;
-    function startMechanicMovement() {
-      let x = 80;
-      let y = 90;
-      let eta = 7;
-      const pin = document.getElementById('mechanicPin');
-      const etaElem = document.getElementById('etaTimer');
-
-      clearInterval(mechanicInterval);
-      mechanicInterval = setInterval(() => {
-        if (x < 150) {
-          x += 3;
-        } else if (y < 160) {
-          y += 3;
-        } else if (x < 240) {
-          x += 3;
-        } else {
-          clearInterval(mechanicInterval);
-          if (etaElem) etaElem.innerText = "Tiba!";
-          return;
-        }
-        if (pin) pin.setAttribute('transform', `translate(${x}, ${y})`);
-        if (eta > 1 && Math.random() > 0.6) {
-          eta -= 1;
-          if (etaElem) etaElem.innerText = eta + " Menit";
-        }
-      }, 800);
-    }
-
-    function simulateMechanicArrived() {
-      alert("🚨 Montir Anda, Pak Agus Santoso, telah tiba di lokasi mobil Anda!");
-      const etaElem = document.getElementById('etaTimer');
-      if (etaElem) etaElem.innerText = "Montir Tiba di Lokasi";
-      const pin = document.getElementById('mechanicPin');
-      if (pin) pin.setAttribute('transform', `translate(245, 160)`);
-    }
-
-    function finishService() {
-      clearInterval(mechanicInterval);
-      document.getElementById('screenTracking').classList.add('hidden');
-      document.getElementById('screenSummary').classList.remove('hidden');
-    }
-
-    function resetToHome() {
-      document.getElementById('screenSummary').classList.add('hidden');
-      document.getElementById('screenHome').classList.remove('hidden');
-      document.getElementById('bottomNav').classList.remove('hidden');
-    }
-
-    // Chat Modal
-    function openChatModal() {
-      document.getElementById('chatModal').classList.remove('hidden');
-    }
-    function closeChatModal() {
-      document.getElementById('chatModal').classList.add('hidden');
-    }
-    function sendChatMessage() {
-      const input = document.getElementById('chatInput');
-      const text = input.value.trim();
-      if (!text) return;
-      const container = document.getElementById('chatContainer');
-      const msgDiv = document.createElement('div');
-      msgDiv.className = "bg-red-600 text-white p-2.5 rounded-2xl rounded-tr-none max-w-[80%] ml-auto shadow";
-      msgDiv.innerText = text;
-      container.appendChild(msgDiv);
-      input.value = '';
-      container.scrollTop = container.scrollHeight;
-
-      setTimeout(() => {
-        const replyDiv = document.createElement('div');
-        replyDiv.className = "bg-slate-800 text-slate-200 p-2.5 rounded-2xl rounded-tl-none max-w-[80%] border border-slate-700";
-        replyDiv.innerText = "Baik Pak, dimengerti! Saya sedang putar balik di lampu merah terdekat.";
-        container.appendChild(replyDiv);
-        container.scrollTop = container.scrollHeight;
-      }, 1200);
-    }
-
-    function simulateCall() {
-      alert("Menghubungi Pak Agus Santoso via panggilan terenkripsi dalam aplikasi...");
-    }
+    // Init Leaflet when page loads
+    window.addEventListener('DOMContentLoaded', () => {
+      initMaps();
+    });
   </script>
 </body>
 </html>

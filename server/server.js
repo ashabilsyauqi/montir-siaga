@@ -3,6 +3,7 @@ const http = require('http');
 const WebSocket = require('ws');
 const cors = require('cors');
 const os = require('os');
+const path = require('path');
 
 const app = express();
 app.use(cors());
@@ -262,6 +263,13 @@ app.post('/api/chat/send', (req, res) => {
   res.json({ success: true, message: msg });
 });
 
+
+// Serve Smartphone PC Emulator (Driver, Montir, Dual HP)
+app.use('/mockup', express.static(path.join(__dirname, '../mockup_web')));
+app.get('/emulator', (req, res) => {
+  res.sendFile(path.join(__dirname, '../mockup_web/emulator.html'));
+});
+
 // Web Owner Live Command Center (Clean Red & Dark/White, Pure Admin Fee Rp 10.000)
 app.get('/', (req, res) => {
   res.send(`
@@ -290,6 +298,11 @@ app.get('/', (req, res) => {
           </div>
           <p class="text-xs text-slate-400 mt-0.5">Memantau pendapatan murni admin pemanggilan & aktivitas real-time</p>
         </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <a href="/emulator" target="_blank" class="bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white text-xs font-black px-4 py-2 rounded-xl shadow-lg flex items-center gap-2 transition">
+          <span>📱</span> Buka Smartphone Emulator PC
+        </a>
       </div>
       <div class="text-right">
         <span class="text-[10px] text-slate-400 font-mono">Server Local IP:</span>
